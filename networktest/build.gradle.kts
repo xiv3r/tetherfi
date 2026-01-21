@@ -15,12 +15,12 @@
  */
 
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
   // Can't use alias() or we get some weird error about double Android on classpath?
   id(libs.plugins.android.application.get().pluginId)
 
-  alias(libs.plugins.kotlin.android)
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.android.cacheFix)
 }
@@ -56,8 +56,13 @@ android {
     // Flag to enable support for the new language APIs
     isCoreLibraryDesugaringEnabled = true
   }
+}
 
-  kotlin { compilerOptions { jvmTarget = JvmTarget.JVM_21 } }
+kotlin {
+  compilerOptions {
+    languageVersion = KotlinVersion.KOTLIN_2_3
+    jvmTarget = JvmTarget.JVM_21
+  }
 }
 
 dependencies {
