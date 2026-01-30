@@ -9,6 +9,7 @@ agp = "9.0.0"
 cacheFix = "3.0.3"
 
 # Kotlin
+kotlin = "2.3.0"
 coroutines = "1.10.2"
 
 # Us
@@ -103,4 +104,3 @@ pydroid-util = { group = "com.github.pyamsoft.pydroid", name = "util", version.r
 qrcode = { group = "io.github.g0dkar", name = "qrcode-kotlin-android", version.ref = "qrCode" }
 
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
-
