@@ -25,36 +25,45 @@ from traceback import print_exc
 
 FAILED_RESP: bytes = bytes([])
 
-def proxy_udp_request(
-    request: bytes,
-    remote_host: str,
-    remote_port: int,
-    proxy_server_host: str, 
-    proxy_server_port: int, 
-    user: str | None = None, 
-    pwd: str | None = None,
-) -> bytes:
-    s = socks.socksocket(socket.AF_INET, socket.SOCK_DGRAM)
+class ProxyUdpRequest:
+    def __init__(
+        self,
+        proxy_server_host: str, 
+        proxy_server_port: int, 
+        user: str | None = None, 
+        pwd: str | None = None,
+    ):
+        self.s = socks.socksocket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    try:
-        # The SOCKS server resolves DNS for us
-        rdns=True
+        try:
+            # The SOCKS server resolves DNS for us
+            rdns=True
 
-        s.set_proxy(
-            socks.SOCKS5, 
-            proxy_server_host,
-            proxy_server_port,
-            rdns,
-            user,
-            pwd,
-        )
+            self.s.set_proxy(
+                socks.SOCKS5, 
+                proxy_server_host,
+                proxy_server_port,
+                rdns,
+                user,
+                pwd,
+            )
+        except socks.ProxyError:
+            print_exc()
+        except socket.error:
+            print_exc()
 
-        s.sendto(request, (remote_host,  remote_port))
-        (resp, _)= s.recvfrom(4096)
-        return resp
-    except socks.ProxyError:
-        print_exc()
-    except socket.error:
-        print_exc()
-
-    return FAILED_RESP
+    def request(
+        self,
+        request: bytes,
+        remote_host: str,
+        remote_port: int,
+    ) -> bytes:
+        try:
+            self.s.sendto(request, (remote_host,  remote_port))
+            (resp, _)= self.s.recvfrom(4096)
+            return resp
+        except socks.ProxyError:
+            print_exc()
+        except socket.error:
+            print_exc()
+        return FAILED_RESP

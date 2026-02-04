@@ -15,13 +15,27 @@
 # under the License.
 
 import socket
+from traceback import print_exc
 
-def normal_udp_request(
-    request: bytes,
-    remote_host: str,
-    remote_port: int,
-) -> bytes:
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.sendto(request, (remote_host, remote_port))
-    (resp, _)= s.recvfrom(4096)
-    return resp
+FAILED_RESP: bytes = bytes([])
+
+class NormalUdpRequest:
+    def __init__(self):
+        try:
+            self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        except socket.error:
+            print_exc()
+
+    def request(
+        self,
+        request: bytes,
+        remote_host: str,
+        remote_port: int,
+    ) -> bytes:
+        try:
+            self.s.sendto(request, (remote_host,  remote_port))
+            (resp, _)= self.s.recvfrom(4096)
+            return resp
+        except socket.error:
+            print_exc()
+        return FAILED_RESP

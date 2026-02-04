@@ -15,8 +15,8 @@
 # under the License.
 
 from __future__ import annotations
-from normal_nonproxy_udp_response import normal_udp_request
-from socks_udp_response import proxy_udp_request
+from normal_nonproxy_udp_response import NormalUdpRequest
+from socks_udp_response import ProxyUdpRequest
 from struct import pack, unpack
 from dataclasses import dataclass
 from pprint import pprint
@@ -339,7 +339,13 @@ def parse_dns_response(resp: bytes) -> DNSResponse:
         ) for (dns_type, dns_class, ttl, ip_address) in answers]
     )
 
-def test_dns(transaction_id: int, domain_name: str, query_type: str) -> int:
+def test_dns(
+    normal: NormalUdpRequest,
+    proxy: ProxyUdpRequest,
+    transaction_id: int,
+    domain_name: str,
+    query_type: str,
+) -> int:
     dns_request = build_dns_request(transaction_id, domain_name, query_type)
 
     normal_response: DNSResponse | None = None
@@ -347,34 +353,32 @@ def test_dns(transaction_id: int, domain_name: str, query_type: str) -> int:
 
     # Fake responses
     # normal_response = fake_normal_response
-    # proxy_response = fake_proxy_response
+    proxy_response = fake_proxy_response
 
-    # if not normal_response:
-    #     b = normal_udp_request(
-    #         request=dns_request,
-    #         remote_host=remote_host,
-    #         remote_port=remote_port,
-    #     )
-    #     print("NORMAL BYTES: ", b)
-    #     if not b or len(b) <= 0:
-    #         print("BAD NORMAL RESPONSE")
-    #         return 1
-    #     normal_response = parse_dns_response(b)
-    #     print("NORMAL RESP: ", normal_response)
-
-    if not proxy_response:
-        b = proxy_udp_request(
+    if not normal_response:
+        b = normal.request(
             request=dns_request,
             remote_host=remote_host,
             remote_port=remote_port,
-            proxy_server_host="192.168.49.1",
-            proxy_server_port=8229,
+        )
+        print("NORMAL BYTES: ", b)
+        if not b or len(b) <= 0:
+            print("BAD NORMAL RESPONSE")
+            return 1
+        normal_response = parse_dns_response(b)
+    pprint(normal_response)
+
+    if not proxy_response:
+        b = proxy.request(
+            request=dns_request,
+            remote_host=remote_host,
+            remote_port=remote_port,
         )
         if not b or len(b) <= 0:
             print("BAD PROXY RESPONSE")
             return 2
         proxy_response = parse_dns_response(b)
-        pprint(proxy_response)
+    pprint(proxy_response)
 
     if normal_response and proxy_response:
         if domain_name == "example.com":
@@ -391,13 +395,32 @@ def main(args: list[str]) -> int:
         return 1
 
     transaction_id = 0x1234
+
+    normal = NormalUdpRequest()
+    proxy = ProxyUdpRequest(
+        proxy_server_host="192.168.49.1",
+        proxy_server_port=8229,
+    )
+
     for domain_name in args:
         print(f"DNS: (A) {domain_name}")
-        test_dns(transaction_id, domain_name, "A")
+        test_dns(
+            normal,
+            proxy,
+            transaction_id, 
+            domain_name,
+            "A",
+        )
         print("")
 
         print(f"DNS: (AAAA) {domain_name}")
-        test_dns(transaction_id, domain_name, "AAAA")
+        test_dns(
+            normal,
+            proxy,
+            transaction_id,
+            domain_name, 
+            "AAAA",
+        )
         print("")
 
     return 0
