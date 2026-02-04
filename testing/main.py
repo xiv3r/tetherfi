@@ -349,18 +349,18 @@ def test_dns(transaction_id: int, domain_name: str, query_type: str) -> int:
     # normal_response = fake_normal_response
     # proxy_response = fake_proxy_response
 
-    if not normal_response:
-        b = normal_udp_request(
-            request=dns_request,
-            remote_host=remote_host,
-            remote_port=remote_port,
-        )
-        print("NORMAL BYTES: ", b)
-        if not b or len(b) <= 0:
-            print("BAD NORMAL RESPONSE")
-            return 1
-        normal_response = parse_dns_response(b)
-        print("NORMAL RESP: ", normal_response)
+    # if not normal_response:
+    #     b = normal_udp_request(
+    #         request=dns_request,
+    #         remote_host=remote_host,
+    #         remote_port=remote_port,
+    #     )
+    #     print("NORMAL BYTES: ", b)
+    #     if not b or len(b) <= 0:
+    #         print("BAD NORMAL RESPONSE")
+    #         return 1
+    #     normal_response = parse_dns_response(b)
+    #     print("NORMAL RESP: ", normal_response)
 
     if not proxy_response:
         b = proxy_udp_request(
