@@ -193,6 +193,11 @@ internal data class UDPRelayServer(
                       }
                       .also { socketTagger.tagSocket() }
                       .bindWithConfiguration(
+                          // TODO(Peter): This ONLY creates a socket for IPv4 connection
+                          //              We need to create dual sockets for IPv4 and IPv6
+                          //              and select a socket based on the resolved upstream address
+                          hostname = "0.0.0.0",
+                          port = 0,
                           onBeforeBind = { maybeDatagramSocket ->
                             // This is an Any type because ktor itself does not rely on any Java
                             //
