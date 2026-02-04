@@ -355,6 +355,17 @@ internal data class UDPRelayServer(
                         )
 
                     // Send the message we got from the client
+                    //
+                    // TODO(Peter): IPv6 support
+                    //              Since right now our test client only works by sending an AF_INET
+                    //              packet, we can only verify IPv4 testing
+                    //              --
+                    //              Since our server socket is also only published on an IPv4 address
+                    //              we are similarly limited there as well
+                    //              --
+                    //              In theory though we can publish the p2p interface IPv6 address
+                    //              and bind to "::" instead of "0.0.0.0"
+                    //              and then we would be able to support dual stack
                     socket.send(Datagram(address = destAddr, packet = byteWriter))
 
                     // Record the write
@@ -365,6 +376,10 @@ internal data class UDPRelayServer(
                     lastActivityTime.recordLastActivity()
 
                     // Wait for a UDP response from real upstream
+                    //
+                    // TODO(Peter): IPv6 support
+                    //              Since the socket is an IPv4 only one,
+                    //              sending datagram to an IPv6 address will never respond
                     val response = socket.receive()
 
                     lastActivityTime.recordLastActivity()
