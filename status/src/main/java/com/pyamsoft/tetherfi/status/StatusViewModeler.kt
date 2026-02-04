@@ -100,39 +100,54 @@ internal constructor(
     val scope = this
     val s = state
 
-    // Only pull once since after this point, the state will be driven by the input
     proxyPreferences.listenForHttpEnabledChanges().also { f ->
       scope.launch(context = Dispatchers.Default) {
-        s.isHttpEnabled.value = f.first()
+        // Only pull once since after this point, the state will be driven by the input
+        val enabled = f.first()
+
+        // Write immediately to save it to Preferences
+        handleEnabledChanged(enabled = enabled, type = ServerPortTypes.HTTP)
 
         config.isHttpEnabled = true
         markPreferencesLoaded(config)
       }
     }
 
-    proxyPreferences.listenForHttpPortChanges().also { f ->
-      scope.launch(context = Dispatchers.Default) {
-        val p = f.first()
-        s.httpPort.value = if (p == 0) "" else "$p"
-
-        config.httpPort = true
-        markPreferencesLoaded(config)
-      }
-    }
-
     proxyPreferences.listenForSocksEnabledChanges().also { f ->
       scope.launch(context = Dispatchers.Default) {
-        s.isSocksEnabled.value = f.first()
+        // Only pull once since after this point, the state will be driven by the input
+        val enabled = f.first()
+
+        // Write immediately to save it to Preferences
+        handleEnabledChanged(enabled = enabled, type = ServerPortTypes.SOCKS)
 
         config.isSocksEnabled = true
         markPreferencesLoaded(config)
       }
     }
 
+    proxyPreferences.listenForHttpPortChanges().also { f ->
+      scope.launch(context = Dispatchers.Default) {
+        // Only pull once since after this point, the state will be driven by the input
+        val p = f.first()
+
+        // Write the port immediately to save it to Preferences
+        val portString = if (p == 0) "" else "$p"
+        handlePortChanged(port = portString, type = ServerPortTypes.HTTP)
+
+        config.httpPort = true
+        markPreferencesLoaded(config)
+      }
+    }
+
     proxyPreferences.listenForSocksPortChanges().also { f ->
       scope.launch(context = Dispatchers.Default) {
+        // Only pull once since after this point, the state will be driven by the input
         val p = f.first()
-        s.socksPort.value = if (p == 0) "" else "$p"
+
+        // Write the port immediately to save it to Preferences
+        val portString = if (p == 0) "" else "$p"
+        handlePortChanged(port = portString, type = ServerPortTypes.SOCKS)
 
         config.socksPort = true
         markPreferencesLoaded(config)
@@ -143,7 +158,11 @@ internal constructor(
       // Only pull once since after this point, the state will be driven by the input
       wifiPreferences.listenForSsidChanges().also { f ->
         scope.launch(context = Dispatchers.Default) {
-          s.ssid.value = f.first()
+          // Only pull once since after this point, the state will be driven by the input
+          val ssid = f.first()
+
+          // Write the SSID to save it to Preferences
+          handleSsidChanged(ssid)
 
           config.ssid = true
           markPreferencesLoaded(config)
@@ -153,7 +172,11 @@ internal constructor(
       // Only pull once since after this point, the state will be driven by the input
       wifiPreferences.listenForPasswordChanges().also { f ->
         scope.launch(context = Dispatchers.Default) {
-          s.password.value = f.first()
+          // Only pull once since after this point, the state will be driven by the input
+          val password = f.first()
+
+          // Write the password to save it to Preferences
+          handlePasswordChanged(password)
 
           config.password = true
           markPreferencesLoaded(config)
@@ -163,7 +186,8 @@ internal constructor(
       wifiPreferences.listenForNetworkBandChanges().also { f ->
         scope.launch(context = Dispatchers.Default) {
           f.collect { band ->
-            s.band.value = band
+            // Write the band to save it to Preferences
+            handleChangeBand(band)
 
             // Watch constantly but only update the initial load config if we haven't loaded yet
             if (s.loadingState.value != StatusViewState.LoadingState.DONE) {
