@@ -137,9 +137,7 @@ internal data class UDPRelayServer(
           // No fragment
           writeByte(FRAGMENT_ZERO)
 
-          // Address type is IPv4
-          writeByte(SOCKS5AddressType.IPV4.byte)
-          write(
+          val serverAddress =
               serverSocket.localAddress
                   .toJavaAddress()
                   .cast<java.net.InetSocketAddress>()
@@ -148,7 +146,15 @@ internal data class UDPRelayServer(
                   .requireNotNull { "server.localAddress.address is NULL" }
                   .address
                   .requireNotNull { "server.localAddress.address.address is NULL" }
-          )
+
+          // Based on the server address, we decide how many bytes to expect for the server socket
+          // address
+          val isServerAddressIPv4 = serverAddress.size == 4
+          val addressType =
+              if (isServerAddressIPv4) SOCKS5AddressType.IPV4 else SOCKS5AddressType.IPV6
+          writeByte(addressType.byte)
+          write(serverAddress)
+
           writeUShort(proxyConnectionInfo.port.toUShort())
 
           // Data

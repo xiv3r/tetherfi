@@ -212,7 +212,11 @@ def encode_domain_name(domain: str) -> bytes:
     encoded_name += b"\0"
     return encoded_name
 
-def build_dns_request(transaction_id: int, domain_name: str) -> bytes:
+def build_dns_request(
+    transaction_id: int,
+    domain_name: str,
+    q_type: str,
+) -> bytes:
     # Standard DNS request
     # 1) AA bit - set to 0, we are a request not an answer
     # 2) TC - truncation, set to 0
@@ -243,8 +247,9 @@ def build_dns_request(transaction_id: int, domain_name: str) -> bytes:
         num_additional_records,
     )
 
-    # A record
-    query_type: int = 1
+    # A record - 1
+    # AAAA - 28
+    query_type: int = 1 if q_type == "A" else 28 if q_type == "AAAA" else 1
 
     # Class IN
     query_class: int = 1
@@ -334,8 +339,8 @@ def parse_dns_response(resp: bytes) -> DNSResponse:
         ) for (dns_type, dns_class, ttl, ip_address) in answers]
     )
 
-def test_dns(transaction_id: int, domain_name: str) -> int:
-    dns_request = build_dns_request(transaction_id, domain_name)
+def test_dns(transaction_id: int, domain_name: str, query_type: str) -> int:
+    dns_request = build_dns_request(transaction_id, domain_name, query_type)
 
     normal_response: DNSResponse | None = None
     proxy_response: DNSResponse | None = None
@@ -387,8 +392,12 @@ def main(args: list[str]) -> int:
 
     transaction_id = 0x1234
     for domain_name in args:
-        print(f"DNS: {domain_name}")
-        test_dns(transaction_id, domain_name)
+        print(f"DNS: (A) {domain_name}")
+        test_dns(transaction_id, domain_name, "A")
+        print("")
+
+        print(f"DNS: (AAAA) {domain_name}")
+        test_dns(transaction_id, domain_name, "AAAA")
         print("")
 
     return 0
