@@ -38,6 +38,8 @@ import io.ktor.network.sockets.isClosed
 import io.ktor.network.sockets.toJavaAddress
 import io.ktor.utils.io.core.build
 import java.net.DatagramSocket
+import java.net.Inet4Address
+import java.net.InetAddress
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.Duration.Companion.seconds
@@ -145,7 +147,7 @@ internal data class UDPRelayServer(
                   .address
                   .requireNotNull { "server.localAddress.address is NULL" }
                   .address
-                  .requireNotNull { "server.localAddress.address.address is NULL" },
+                  .requireNotNull { "server.localAddress.address.address is NULL" }
           )
           writeUShort(proxyConnectionInfo.port.toUShort())
 
@@ -195,7 +197,7 @@ internal data class UDPRelayServer(
                             if (datagramSocket != null) {
                               networkBinder.bindToNetwork(datagramSocket)
                             }
-                          }
+                          },
                       )
                       .also {
                         // Track server socket
@@ -271,10 +273,24 @@ internal data class UDPRelayServer(
                     // We expect this to be from the initial connection port
                     if (!isPacketFromClient(proxyClientAddress, proxyConnectionInfo)) {
                       Timber.w { "DROP: Packet was not from expected client: $proxyClientAddress" }
+                      // Do not respond, say nothing to an unexpected client
+
+                      serverSocket.close()
                       return@use
                     }
 
-                    val packetDestination = readInputPacket(proxyReadPacket) ?: return@use
+                    val packetDestination = readInputPacket(proxyReadPacket)
+                    if (packetDestination == null) {
+                      // Unable to parse the packet from the client
+
+                      // Send SOMETHING to the application to "close" the UDP receive end
+                      serverSocket.send(
+                          Datagram(address = proxyClientAddress, packet = EMPTY_PACKET)
+                      )
+
+                      serverSocket.close()
+                      return@use
+                    }
 
                     // Copy the input data for writing
                     val byteWriter =
@@ -288,18 +304,47 @@ internal data class UDPRelayServer(
                     // Grab the amount we are going to write
                     val writeAmount = byteWriter.buffer.size
 
+                    // TODO(Peter): Currently our proxy ONLY works over IPv4
+                    // We resolve the hostname on our Android device here via DNS
+                    // and then we proxy the connection from our requesting client
+                    //
+                    // If we are unable to find an IPv4 address to use, we must fail
+                    val destinationHostName = packetDestination.address.hostName
+                    val ipv4Address =
+                        InetAddress.getAllByName(destinationHostName)
+                            // Only IPv4 addresses
+                            .filter { it is Inet4Address }
+                            // Pick a random one
+                            .randomOrNull()
+                            ?.hostAddress
+                    if (ipv4Address == null) {
+                      Timber.w {
+                        "No IPv4 address could be found for dest=${destinationHostName} ${packetDestination.address}"
+                      }
+                      Timber.w { "Currently SOCKS5 UDP-ASSOCIATE proxy only works over IPv4" }
+
+                      // Send SOMETHING to the application to "close" the UDP receive end
+                      serverSocket.send(
+                          Datagram(address = proxyClientAddress, packet = EMPTY_PACKET)
+                      )
+
+                      serverSocket.close()
+                      return@use
+                    }
+
+                    Timber.d {
+                      "Force upstream IPv4 connection to $destinationHostName -> $ipv4Address"
+                    }
+                    val destAddr =
+                        InetSocketAddress(
+                            // Use hostAddress instead of hostname to resolve DNS on our system
+                            // and avoid a duplicate DNS lookup in the datagram
+                            hostname = ipv4Address,
+                            port = packetDestination.port.toInt(),
+                        )
+
                     // Send the message we got from the client
-                    socket.send(
-                        Datagram(
-                            address =
-                                InetSocketAddress(
-                                    hostname =
-                                        packetDestination.address.hostAddress.requireNotNull(),
-                                    port = packetDestination.port.toInt(),
-                                ),
-                            packet = byteWriter,
-                        ),
-                    )
+                    socket.send(Datagram(address = destAddr, packet = byteWriter))
 
                     // Record the write
                     if (writeAmount > 0) {
@@ -320,10 +365,7 @@ internal data class UDPRelayServer(
                     val readAmount = responsePacket.buffer.size
 
                     serverSocket.send(
-                        Datagram(
-                            address = proxyClientAddress,
-                            packet = responsePacket,
-                        ),
+                        Datagram(address = proxyClientAddress, packet = responsePacket)
                     )
 
                     // Record the read
@@ -364,5 +406,7 @@ internal data class UDPRelayServer(
 
     // We do NOT support fragments, anything other than the 0 byte should be dropped
     private const val FRAGMENT_ZERO: Byte = 0
+
+    private val EMPTY_PACKET: Source = Buffer()
   }
 }
