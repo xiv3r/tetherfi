@@ -360,7 +360,8 @@ internal data class UDPRelayServer(
                     //              Since right now our test client only works by sending an AF_INET
                     //              packet, we can only verify IPv4 testing
                     //              --
-                    //              Since our server socket is also only published on an IPv4 address
+                    //              Since our server socket is also only published on an IPv4
+                    // address
                     //              we are similarly limited there as well
                     //              --
                     //              In theory though we can publish the p2p interface IPv6 address

@@ -30,7 +30,6 @@
     android:roundIcon="@mipmap/ic_launcher"
     android:supportsRtl="true"
     android:theme="@style/Theme.TFApp"
-    android:usesCleartextTraffic="true"
   >
     <!--
               Compose Handles config changes
