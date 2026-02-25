@@ -20,7 +20,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.pyamsoft.pydroid.ui.icons.IconPainters as IconPainters2
 import com.pyamsoft.tetherfi.ui.icons.IconPainters
 
 @Composable
@@ -31,7 +30,7 @@ internal fun ValidIcon(
 ) {
   Icon(
       modifier = modifier,
-      painter = if (isValid) IconPainters.check() else IconPainters2.close(),
+      painter = if (isValid) IconPainters.check() else IconPainters.close(),
       tint = if (isValid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
       contentDescription = description,
   )

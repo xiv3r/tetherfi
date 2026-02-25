@@ -51,4 +51,6 @@ object IconPainters {
   @Composable fun devices() = painterResource(R.drawable.devices_24px)
 
   @Composable fun mobile() = painterResource(R.drawable.mobile_24px)
+
+  @Composable fun close() = painterResource(R.drawable.close_24px)
 }
