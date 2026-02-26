@@ -70,7 +70,8 @@ class MainActivity : ComponentActivity() {
                   override val changelog = buildChangeLog {
                     //                    feature("Add unique Activities to turn the hotspot On or
                     // Off.")
-                    change("Rename the application to TetherFuseNet")
+                    feature("New Netty based engine for HTTP proxy. The new engine is OFF by default. You must opt-in to use it. It will become the default in version 60")
+                    feature("New Netty based engine for SOCKS proxy. The new engine is OFF by default. You must opt-in to use it. It will become the default in version 60")
                   }
                 },
         )
