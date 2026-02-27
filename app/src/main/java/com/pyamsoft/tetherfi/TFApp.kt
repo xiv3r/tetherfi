@@ -156,6 +156,12 @@ class TFApp : Application() {
           "QRCode Generator implemented in pure Kotlin",
           license = OssLicenses.MIT,
       )
+
+      OssLibraries.add(
+          "Netty",
+          "https://netty.io",
+          "An asynchronous event-driven network application framework for rapid development of maintainable high performance protocol servers & clients.",
+      )
     }
   }
 }

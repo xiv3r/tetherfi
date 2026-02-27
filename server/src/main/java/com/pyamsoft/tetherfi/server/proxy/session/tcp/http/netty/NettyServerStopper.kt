@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 pyamsoft
+ * Copyright 2026 pyamsoft
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,9 @@
  * limitations under the License.
  */
 
-package com.pyamsoft.tetherfi.server.network
+package com.pyamsoft.tetherfi.server.proxy.session.tcp.http.netty
 
-import android.net.Network
-import androidx.annotation.CheckResult
-import io.ktor.network.sockets.Socket
-import java.net.DatagramSocket
+fun interface NettyServerStopper {
 
-fun interface SocketBinder {
-
-  suspend fun withMobileDataNetworkActive(block: suspend (NetworkBinder) -> Unit)
-
-  interface NetworkBinder {
-
-    @CheckResult suspend fun getNetwork(): Network?
-
-    suspend fun bindToNetwork(socket: Socket)
-
-    suspend fun bindToNetwork(datagramSocket: DatagramSocket)
-  }
+  fun stop()
 }

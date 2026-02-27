@@ -31,9 +31,9 @@ import com.pyamsoft.tetherfi.server.network.SocketBinder
 import com.pyamsoft.tetherfi.server.proxy.ServerDispatcher
 import com.pyamsoft.tetherfi.server.proxy.SharedProxy
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
-import com.pyamsoft.tetherfi.server.proxy.manager.NettyProxyManager
 import com.pyamsoft.tetherfi.server.proxy.manager.ProxyManager
 import com.pyamsoft.tetherfi.server.proxy.manager.TcpProxyManager
+import com.pyamsoft.tetherfi.server.proxy.manager.netty.NettyHttpProxyManager
 import com.pyamsoft.tetherfi.server.proxy.session.ProxySession
 import com.pyamsoft.tetherfi.server.proxy.session.tcp.TcpProxyData
 import javax.inject.Inject
@@ -48,6 +48,7 @@ internal class DefaultProxyManagerFactory
 @Inject
 internal constructor(
     @param:ServerInternalApi private val socketBinder: SocketBinder,
+    @param:Named("debug") private val isDebug: Boolean,
     @param:Named("app_scope") private val appScope: CoroutineScope,
     @param:Named("http") private val httpSession: ProxySession<TcpProxyData>,
     @param:Named("socks") private val socksSession: ProxySession<TcpProxyData>,
@@ -102,11 +103,12 @@ internal constructor(
 
     if (USE_NEW_NETTY) {
       Timber.d { "Using new Netty server" }
-      return NettyProxyManager(
-        socketBinder = socketBinder,
-        socketTagger = socketTagger,
-        hostConnection = info,
-        port = port,
+      return NettyHttpProxyManager(
+          isDebug = isDebug,
+          socketBinder = socketBinder,
+          socketTagger = socketTagger,
+          hostConnection = info,
+          port = port,
       )
     }
 

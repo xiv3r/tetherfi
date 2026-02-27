@@ -72,8 +72,11 @@ dependencies {
   // Compose runtime for annotations
   implementation(libs.compose.runtime.annotation)
 
+  // TODO(Peter): NextGen version will drop ktor and directly use Netty engine.
   implementation(libs.ktor.network)
-  implementation(libs.ktor.server.netty)
+
+  implementation(libs.netty.codec.http)
+  implementation(libs.netty.codec.socks)
 
   // PYDroid
   implementation(libs.pydroid.bus)
