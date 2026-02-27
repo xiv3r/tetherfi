@@ -148,6 +148,10 @@ internal constructor(
   private data class PreferredNetworkBinder(private val preferredNetwork: StateFlow<Network?>) :
       SocketBinder.NetworkBinder {
 
+    override suspend fun getNetwork(): Network? {
+      return preferredNetwork.first()
+    }
+
     override suspend fun bindToNetwork(socket: Socket) {
       if (socket is Selectable) {
         val channel = socket.channel

@@ -20,6 +20,7 @@ import androidx.annotation.CheckResult
 import com.pyamsoft.pydroid.bus.EventConsumer
 import com.pyamsoft.pydroid.core.ThreadEnforcer
 import com.pyamsoft.tetherfi.core.AppDevEnvironment
+import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ExpertPreferences
 import com.pyamsoft.tetherfi.server.ProxyPreferences
 import com.pyamsoft.tetherfi.server.ServerInternalApi
@@ -30,6 +31,7 @@ import com.pyamsoft.tetherfi.server.network.SocketBinder
 import com.pyamsoft.tetherfi.server.proxy.ServerDispatcher
 import com.pyamsoft.tetherfi.server.proxy.SharedProxy
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
+import com.pyamsoft.tetherfi.server.proxy.manager.NettyProxyManager
 import com.pyamsoft.tetherfi.server.proxy.manager.ProxyManager
 import com.pyamsoft.tetherfi.server.proxy.manager.TcpProxyManager
 import com.pyamsoft.tetherfi.server.proxy.session.ProxySession
@@ -56,6 +58,8 @@ internal constructor(
     private val appEnvironment: AppDevEnvironment,
     private val serverStopConsumer: EventConsumer<ServerStopRequestEvent>,
 ) : ProxyManager.Factory {
+
+  private val USE_NEW_NETTY = true
 
   @CheckResult
   private fun createTcp(
@@ -95,6 +99,16 @@ internal constructor(
     enforcer.assertOffMainThread()
 
     val port = proxyPreferences.listenForHttpPortChanges().first()
+
+    if (USE_NEW_NETTY) {
+      Timber.d { "Using new Netty server" }
+      return NettyProxyManager(
+        socketBinder = socketBinder,
+        socketTagger = socketTagger,
+        hostConnection = info,
+        port = port,
+      )
+    }
 
     return createTcp(
         proxyType = SharedProxy.Type.HTTP,

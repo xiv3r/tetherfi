@@ -16,6 +16,8 @@
 
 package com.pyamsoft.tetherfi.server.network
 
+import android.net.Network
+import androidx.annotation.CheckResult
 import io.ktor.network.sockets.Socket
 import java.net.DatagramSocket
 
@@ -24,6 +26,10 @@ fun interface SocketBinder {
   suspend fun withMobileDataNetworkActive(block: suspend (NetworkBinder) -> Unit)
 
   interface NetworkBinder {
+
+    @CheckResult
+    suspend fun getNetwork(): Network?
+
     suspend fun bindToNetwork(socket: Socket)
 
     suspend fun bindToNetwork(datagramSocket: DatagramSocket)

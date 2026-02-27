@@ -16,11 +16,8 @@
 
 package com.pyamsoft.tetherfi.server.proxy.session.tcp.http
 
-import android.R.attr.host
-import android.R.attr.port
 import android.net.Network
 import androidx.annotation.CheckResult
-import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import io.netty.bootstrap.Bootstrap
@@ -31,6 +28,7 @@ import io.netty.buffer.Unpooled
 import io.netty.channel.Channel
 import io.netty.channel.ChannelFactory
 import io.netty.channel.ChannelFuture
+import io.netty.channel.ChannelFutureListener
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
 import io.netty.channel.ChannelInitializer
@@ -41,16 +39,24 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.codec.http.DefaultFullHttpResponse
+import io.netty.handler.codec.http.HttpClientCodec
+import io.netty.handler.codec.http.HttpContent
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.HttpRequest
 import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpServerCodec
 import io.netty.handler.codec.http.HttpVersion
+import io.netty.handler.logging.LogLevel
+import io.netty.handler.logging.LoggingHandler
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
+import io.netty.util.ReferenceCountUtil
 import java.net.URI
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.getAndUpdate
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 
 fun interface NettyServerStopper {
@@ -100,7 +106,15 @@ class NettyHttpProxy(
   onError: (Throwable) -> Unit,
   private val socketTagger: SocketTagger,
   private val androidPreferredNetwork: Network?,
-) : NettyProxy(host = host, port = port, onOpened = onOpened, onClosing = onClosing, onError = onError) {
+) :
+  NettyProxy(
+    socketTagger = socketTagger,
+    host = host,
+    port = port,
+    onOpened = onOpened,
+    onClosing = onClosing,
+    onError = onError,
+  ) {
 
   override fun onChannelInitialized(channel: SocketChannel) {
     val pipeline = channel.pipeline()
@@ -114,6 +128,7 @@ class NettyHttpProxy(
 }
 
 abstract class NettyProxy(
+  private val socketTagger: SocketTagger,
   private val host: String,
   private val port: Int,
   private val onOpened: () -> Unit,
@@ -134,10 +149,14 @@ abstract class NettyProxy(
         .childHandler(
           object : ChannelInitializer<SocketChannel>() {
             override fun initChannel(ch: SocketChannel) {
+              ch.pipeline().addLast(LoggingHandler(LogLevel.DEBUG))
               onChannelInitialized(ch)
             }
           }
         )
+
+    // Tag the server socket
+    socketTagger.tagSocket()
 
     val serverChannel =
       bootstrap
@@ -176,6 +195,8 @@ abstract class NettyProxy(
 class HttpProxyHandlder(private val socketTagger: SocketTagger, private val androidPreferredNetwork: Network?) :
   ChannelInboundHandlerAdapter() {
 
+  private val messageQueue = MutableStateFlow<List<Any>>(emptyList())
+
   private var outboundChannel: Channel? = null
 
   private data class HostAndPort(val host: String, val port: Int)
@@ -192,6 +213,7 @@ class HttpProxyHandlder(private val socketTagger: SocketTagger, private val andr
     outboundChannel?.let { old ->
       Timber.d { "Re-assigning outbound channel $old -> $channel" }
       if (old.isActive) {
+        Timber.d { "Close old outbound channel $old" }
         old.close()
       }
     }
@@ -205,11 +227,15 @@ class HttpProxyHandlder(private val socketTagger: SocketTagger, private val andr
   }
 
   private fun closeChannels(ctx: ChannelHandlerContext) {
+    Timber.d { "close outbound channel" }
     outboundChannel?.close()
+
+    Timber.d { "close owner channel" }
     ctx.close()
   }
 
   override fun channelRegistered(ctx: ChannelHandlerContext) {
+    Timber.d { "Add idle timeout handler" }
     ctx.pipeline().addFirst("idle", IdleStateHandler(60, 60, 60))
   }
 
@@ -222,7 +248,9 @@ class HttpProxyHandlder(private val socketTagger: SocketTagger, private val andr
 
   override fun channelWritabilityChanged(ctx: ChannelHandlerContext) {
     try {
-      outboundChannel?.config()?.isAutoRead = ctx.channel().isWritable
+      val isWritable = ctx.channel().isWritable
+      Timber.d { "Owner write changed: $ctx $isWritable" }
+      outboundChannel?.config()?.isAutoRead = isWritable
     } finally {
       ctx.fireChannelWritabilityChanged()
     }
@@ -242,7 +270,12 @@ class HttpProxyHandlder(private val socketTagger: SocketTagger, private val andr
   }
 
   @CheckResult
-  private fun newOutboundConnection(channel: Channel): Bootstrap {
+  private fun newOutboundConnection(
+    channel: Channel,
+    hostName: String,
+    port: Int,
+    onChannelOpened: (Channel) -> Unit = {},
+  ): ChannelFuture {
     return Bootstrap()
       .group(channel.eventLoop())
       .channelFactory(
@@ -252,43 +285,59 @@ class HttpProxyHandlder(private val socketTagger: SocketTagger, private val andr
       .handler(
         object : ChannelInitializer<Channel>() {
           override fun initChannel(ch: Channel) {
+            onChannelOpened(ch)
+
+            val pipeline = ch.pipeline()
+            pipeline.addLast(LoggingHandler(LogLevel.DEBUG))
+
             // Once our connection to the internet is made, relay data in tunnel
-            ch.pipeline().addLast(RelayHandler(channel))
+            pipeline.addLast(RelayHandler(hostName, port, channel))
           }
         }
       )
+      .connect(hostName, port)
   }
 
   private fun handleHttpsConnect(ctx: ChannelHandlerContext, msg: HttpRequest) {
     val parsed = parseHostAndPort(msg.uri())
-    newOutboundConnection(ctx.channel()).connect(parsed.host, parsed.port).addListener { future ->
+    val clientChannel = ctx.channel()
+
+    val future = newOutboundConnection(clientChannel, parsed.host, parsed.port)
+    val outbound = future.channel()
+    future.addListener { future ->
       if (!future.isSuccess) {
         sendErrorAndClose(ctx)
         return@addListener
       }
 
-      val outbound = future.cast<ChannelFuture>()?.channel()
-      if (outbound == null) {
-        sendErrorAndClose(ctx)
-        return@addListener
-      }
+      // Enable auto-read once connection is established
+      clientChannel.config().isAutoRead = true
 
       assignOutboundChannel(outbound)
 
       // Tell proxy we've established connection
       val response = DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)
+      // Must flush here or the connection does not complete
+      Timber.d { "Write and flush CONNECT: $response" }
       ctx.writeAndFlush(response)
+
+      // And then tell the client its "the end"
+      replayQueuedMessages(outbound)
 
       // Drop down to raw TCP
       val pipeline = ctx.pipeline()
       // Remove the http server codec
-      pipeline.remove(HttpServerCodec::class.java)
+      if (pipeline.get(HttpServerCodec::class.java) != null) {
+        pipeline.remove(HttpServerCodec::class.java)
+      }
 
       // Remove our own handler
-      pipeline.remove(this)
+      if (pipeline.get(this::class.java) != null) {
+        pipeline.remove(this::class.java)
+      }
 
       // Add a relay for the internet outbound
-      pipeline.addLast(RelayHandler(outbound))
+      pipeline.addLast(RelayHandler(parsed.host, parsed.port, outbound))
     }
   }
 
@@ -296,38 +345,89 @@ class HttpProxyHandlder(private val socketTagger: SocketTagger, private val andr
     val uri = URI(msg.uri())
     val port = if (uri.port <= 0) 80 else uri.port
 
-    newOutboundConnection(ctx.channel()).connect(uri.host, port).addListener { future ->
+    val hostname = "${uri.host}"
+    val clientChannel = ctx.channel()
+
+    val future = newOutboundConnection(clientChannel, hostname, port) { it.pipeline().addLast(HttpClientCodec()) }
+    val outbound = future.channel()
+    future.addListener { future ->
       if (!future.isSuccess) {
         sendErrorAndClose(ctx)
         return@addListener
       }
 
-      val outbound = future.cast<ChannelFuture>()?.channel()
-      if (outbound == null) {
-        sendErrorAndClose(ctx)
-        return@addListener
-      }
+      // Enable auto-read once connection is established
+      clientChannel.config().isAutoRead = true
 
       assignOutboundChannel(outbound)
 
       // Adjust the URL to be relative to the new host
-      var newUri = uri.rawPath + (uri.rawQuery?.let { "?$it" } ?: "")
-      newUri = newUri.ifBlank { "/" }
+      var query = uri.rawQuery.orEmpty()
+      query = if (query.isNotBlank()) "?${query}" else ""
+
+      val newUri = "${uri.rawPath}${query}".ifBlank { "/" }
       msg.uri = newUri
+
       outbound.writeAndFlush(msg)
+
+      // And then tell the client its "the end"
+      replayQueuedMessages(outbound)
+
+      // Drop down to raw TCP
+      val pipeline = ctx.pipeline()
+      // Remove the http server codec
+      if (pipeline.get(HttpClientCodec::class.java) != null) {
+        pipeline.remove(HttpClientCodec::class.java)
+      }
+
+      // Remove our own handler
+      if (pipeline.get(this::class.java) != null) {
+        pipeline.remove(this::class.java)
+      }
+
+      // Add a relay for the internet outbound
+      pipeline.addLast(RelayHandler(hostname, port, outbound))
+    }
+  }
+
+  private fun replayQueuedMessages(channel: Channel) {
+    var needsFlush = false
+    try {
+      val queued = messageQueue.getAndUpdate { emptyList() }
+      needsFlush = queued.isNotEmpty()
+      if (needsFlush) {
+        for (q in queued) {
+          channel.write(q)
+        }
+      }
+    } finally {
+      if (needsFlush) {
+        channel.flush()
+      }
     }
   }
 
   override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
-    if (msg is HttpRequest) {
-      if (msg.method() == HttpMethod.CONNECT) {
-        handleHttpsConnect(ctx, msg)
+    try {
+      if (msg is HttpRequest) {
+        if (msg.method() == HttpMethod.CONNECT) {
+          handleHttpsConnect(ctx, msg)
+        } else {
+          handleHttpForward(ctx, msg)
+        }
+      } else if (msg is HttpContent) {
+        val outbound = outboundChannel
+        if (outbound == null) {
+          messageQueue.update { it + msg }
+        } else {
+          outbound.writeAndFlush(msg)
+        }
       } else {
-        handleHttpForward(ctx, msg)
+        Timber.w { "MSG was not http content: $msg" }
+        sendErrorAndClose(ctx)
       }
-    } else {
-      Timber.w { "MSG was not http content: $msg" }
-      sendErrorAndClose(ctx)
+    } finally {
+      ReferenceCountUtil.release(msg)
     }
   }
 }
@@ -338,56 +438,58 @@ class NetworkBoundChannelFactory(
 ) : ChannelFactory<NioSocketChannel> {
 
   override fun newChannel(): NioSocketChannel {
-    val outboundSocketChannel = java.nio.channels.SocketChannel.open().apply { configureBlocking(false) }
+    socketTagger.tagSocket()
 
+    val outboundSocketChannel = java.nio.channels.SocketChannel.open().apply { configureBlocking(false) }
     val socket = outboundSocketChannel.socket()
 
-    socketTagger.tagSocket()
     androidPreferredNetwork?.bindSocket(socket)
 
     return NioSocketChannel(outboundSocketChannel)
   }
 }
 
-class RelayHandler(private val relayChannel: Channel) : ChannelInboundHandlerAdapter() {
+class RelayHandler(private val hostName: String, private val port: Int, private val clientChannel: Channel) :
+  ChannelInboundHandlerAdapter() {
 
-  private fun closeChannels(ctx: ChannelHandlerContext) {
-    if (relayChannel.isActive) {
-      relayChannel.close()
+  private fun flushAndClose(channel: Channel) {
+    if (channel.isActive) {
+      channel.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE)
     }
-
-    ctx.close()
   }
 
   override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
-    if (!relayChannel.isActive) {
+    if (!clientChannel.isActive) {
       return
     }
 
     if (msg is ByteBuf) {
       val byteCount = msg.readableBytes().toLong()
       // TODO Record amount consumed
-      Timber.d { "Read $byteCount bytes" }
+      //      Timber.d { "(${hostName}:${port}) Read $byteCount bytes" }
     }
 
-    relayChannel.writeAndFlush(msg)
+    clientChannel.writeAndFlush(msg)
   }
 
   override fun channelWritabilityChanged(ctx: ChannelHandlerContext) {
     try {
-      relayChannel.config().isAutoRead = ctx.channel().isWritable
+      val isWritable = ctx.channel().isWritable
+      Timber.d { "(${hostName}:${port}) Relay write changed: $ctx $isWritable" }
+      clientChannel.config().isAutoRead = isWritable
     } finally {
       ctx.fireChannelWritabilityChanged()
     }
   }
 
   override fun channelInactive(ctx: ChannelHandlerContext) {
-    Timber.d { "Close inactive relay channel: $ctx" }
-    closeChannels(ctx)
+    Timber.d { "(${hostName}:${port}) Close inactive relay channel: $ctx" }
+    flushAndClose(ctx.channel())
+    flushAndClose(clientChannel)
   }
 
   override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
-    Timber.e(cause) { "RelayChannel exception caught $ctx" }
-    closeChannels(ctx)
+    Timber.e(cause) { "(${hostName}:${port}) RelayChannel exception caught $ctx" }
+    flushAndClose(ctx.channel())
   }
 }

@@ -16,6 +16,7 @@
 
 package com.pyamsoft.tetherfi.server.network
 
+import android.net.Network
 import com.pyamsoft.tetherfi.core.Timber
 import io.ktor.network.sockets.Socket
 import java.net.DatagramSocket
@@ -37,6 +38,11 @@ internal class PassthroughSocketBinder @Inject internal constructor() : SocketBi
   companion object {
     private val NOOP_BOUND =
         object : SocketBinder.NetworkBinder {
+
+          override suspend fun getNetwork(): Network? {
+            return null
+          }
+
           override suspend fun bindToNetwork(socket: Socket) {
             // Do nothing
           }
