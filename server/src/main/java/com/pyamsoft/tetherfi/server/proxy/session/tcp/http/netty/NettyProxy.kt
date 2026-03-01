@@ -22,6 +22,7 @@ import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.MultiThreadIoEventLoopGroup
+import io.netty.channel.SingleThreadIoEventLoop
 import io.netty.channel.nio.NioIoHandler
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
@@ -38,7 +39,8 @@ protected constructor(
 
   @CheckResult
   fun start(): NettyServerStopper {
-    val bossGroup = MultiThreadIoEventLoopGroup(NioIoHandler.newFactory())
+    // The boss group usually does not need more than a single thread allocated to it
+    val bossGroup = MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory())
     val workerGroup = MultiThreadIoEventLoopGroup(NioIoHandler.newFactory())
 
     val bootstrap =

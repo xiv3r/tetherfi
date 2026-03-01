@@ -352,8 +352,8 @@ def test_dns(
     proxy_response: DNSResponse | None = None
 
     # Fake responses
-    # normal_response = fake_normal_response
-    proxy_response = fake_proxy_response
+    normal_response = fake_normal_response
+    # proxy_response = fake_proxy_response
 
     if not normal_response:
         b = normal.request(
@@ -399,7 +399,10 @@ def main(args: list[str]) -> int:
     normal = NormalUdpRequest()
     proxy = ProxyUdpRequest(
         proxy_server_host="192.168.49.1",
-        proxy_server_port=8229,
+        # Netty based
+        proxy_server_port=8228,
+        # by hand
+        # proxy_server_port=8229,
     )
 
     for domain_name in args:

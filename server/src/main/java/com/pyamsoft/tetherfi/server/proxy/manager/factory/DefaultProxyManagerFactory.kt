@@ -33,7 +33,7 @@ import com.pyamsoft.tetherfi.server.proxy.SharedProxy
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import com.pyamsoft.tetherfi.server.proxy.manager.ProxyManager
 import com.pyamsoft.tetherfi.server.proxy.manager.TcpProxyManager
-import com.pyamsoft.tetherfi.server.proxy.manager.netty.NettyHttpProxyManager
+import com.pyamsoft.tetherfi.server.proxy.manager.netty.NettyDelegatingProxyManager
 import com.pyamsoft.tetherfi.server.proxy.session.ProxySession
 import com.pyamsoft.tetherfi.server.proxy.session.tcp.TcpProxyData
 import javax.inject.Inject
@@ -103,7 +103,7 @@ internal constructor(
 
     if (USE_NEW_NETTY) {
       Timber.d { "Using new Netty server" }
-      return NettyHttpProxyManager(
+      return NettyDelegatingProxyManager(
           isDebug = isDebug,
           socketBinder = socketBinder,
           socketTagger = socketTagger,

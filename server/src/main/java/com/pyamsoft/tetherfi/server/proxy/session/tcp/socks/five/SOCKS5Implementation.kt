@@ -178,6 +178,7 @@ internal constructor(
               try {
                 // Once the bind is open, we send the initial reply telling the client
                 // the IP and the port
+                Timber.d { "Open UDP Relay: $addressType ${serverSocket.localAddress.cast<InetSocketAddress>()}" }
                 responder.sendBindInitialized(
                     addressType = addressType,
                     bound = serverSocket.localAddress.cast(),

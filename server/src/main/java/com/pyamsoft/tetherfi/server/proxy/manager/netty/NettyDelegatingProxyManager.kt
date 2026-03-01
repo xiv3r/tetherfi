@@ -20,12 +20,12 @@ import android.net.Network
 import com.pyamsoft.tetherfi.server.broadcast.BroadcastNetworkStatus
 import com.pyamsoft.tetherfi.server.network.SocketBinder
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
-import com.pyamsoft.tetherfi.server.proxy.session.tcp.http.netty.SuspendingNettyHttpProxy
+import com.pyamsoft.tetherfi.server.proxy.session.tcp.http.netty.SuspendingNettyDelegatingProxy
 import com.pyamsoft.tetherfi.server.proxy.session.tcp.http.netty.SuspendingNettyProxy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-internal class NettyHttpProxyManager
+internal class NettyDelegatingProxyManager
 internal constructor(
     socketBinder: SocketBinder,
     private val isDebug: Boolean,
@@ -45,7 +45,7 @@ internal constructor(
       onClosing: suspend () -> Unit,
       onError: suspend (Throwable) -> Unit,
   ): SuspendingNettyProxy {
-    return SuspendingNettyHttpProxy(
+    return SuspendingNettyDelegatingProxy(
         isDebug = isDebug,
         host = hostConnection.hostName,
         port = port,

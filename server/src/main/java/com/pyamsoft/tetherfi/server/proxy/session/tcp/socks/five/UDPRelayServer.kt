@@ -16,6 +16,7 @@
 
 package com.pyamsoft.tetherfi.server.proxy.session.tcp.socks.five
 
+import android.util.Log
 import androidx.annotation.CheckResult
 import com.pyamsoft.pydroid.core.ThreadEnforcer
 import com.pyamsoft.pydroid.core.cast
@@ -31,12 +32,14 @@ import com.pyamsoft.tetherfi.server.proxy.ServerDispatcher
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import com.pyamsoft.tetherfi.server.proxy.SocketTracker
 import com.pyamsoft.tetherfi.server.proxy.session.tcp.enforceBandwidthLimit
+import com.pyamsoft.tetherfi.server.proxy.session.tcp.http.netty.handler.socks.UdpRelayUpstreamHandler
 import io.ktor.network.sockets.BoundDatagramSocket
 import io.ktor.network.sockets.Datagram
 import io.ktor.network.sockets.InetSocketAddress
 import io.ktor.network.sockets.isClosed
 import io.ktor.network.sockets.toJavaAddress
 import io.ktor.utils.io.core.build
+import io.netty.buffer.ByteBufUtil
 import java.net.DatagramSocket
 import java.net.Inet4Address
 import java.net.InetAddress
@@ -55,6 +58,7 @@ import kotlinx.coroutines.launch
 import kotlinx.io.Buffer
 import kotlinx.io.InternalIoApi
 import kotlinx.io.Source
+import kotlinx.io.readByteArray
 import kotlinx.io.writeUShort
 
 internal data class UDPRelayServer(
@@ -137,11 +141,12 @@ internal data class UDPRelayServer(
           // No fragment
           writeByte(FRAGMENT_ZERO)
 
+          val inet = serverSocket.localAddress
+            .toJavaAddress()
+            .cast<java.net.InetSocketAddress>()
+            .requireNotNull { "server.localAddress was NOT a java.net.InetSocketAddress" }
           val serverAddress =
-              serverSocket.localAddress
-                  .toJavaAddress()
-                  .cast<java.net.InetSocketAddress>()
-                  .requireNotNull { "server.localAddress was NOT a java.net.InetSocketAddress" }
+              inet
                   .address
                   .requireNotNull { "server.localAddress.address is NULL" }
                   .address
@@ -155,7 +160,8 @@ internal data class UDPRelayServer(
           writeByte(addressType.byte)
           write(serverAddress)
 
-          writeUShort(proxyConnectionInfo.port.toUShort())
+          val p = inet.port.toUShort()
+          writeUShort(p)
 
           // Data
           transferFrom(data)

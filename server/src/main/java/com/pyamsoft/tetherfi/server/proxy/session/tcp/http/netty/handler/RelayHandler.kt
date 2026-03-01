@@ -14,28 +14,19 @@
  * limitations under the License.
  */
 
-package com.pyamsoft.tetherfi.server.proxy.session.tcp.http.netty
+package com.pyamsoft.tetherfi.server.proxy.session.tcp.http.netty.handler
 
 import com.pyamsoft.tetherfi.core.Timber
 import io.netty.buffer.ByteBuf
-import io.netty.buffer.Unpooled
 import io.netty.channel.Channel
-import io.netty.channel.ChannelFutureListener
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
 
 internal class RelayHandler
 internal constructor(
-    private val hostName: String,
-    private val port: Int,
-    private val clientChannel: Channel,
+  private val id: String,
+  private val clientChannel: Channel,
 ) : ChannelInboundHandlerAdapter() {
-
-  private fun flushAndClose(channel: Channel) {
-    if (channel.isActive) {
-      channel.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE)
-    }
-  }
 
   override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
     if (!clientChannel.isActive) {
@@ -55,7 +46,7 @@ internal constructor(
   override fun channelWritabilityChanged(ctx: ChannelHandlerContext) {
     try {
       val isWritable = ctx.channel().isWritable
-      Timber.d { "(${hostName}:${port}) Relay write changed: $ctx $isWritable" }
+      Timber.d { "($id) Relay write changed: $ctx $isWritable" }
       clientChannel.config().isAutoRead = isWritable
     } finally {
       ctx.fireChannelWritabilityChanged()
@@ -63,13 +54,19 @@ internal constructor(
   }
 
   override fun channelInactive(ctx: ChannelHandlerContext) {
-    Timber.d { "(${hostName}:${port}) Close inactive relay channel: $ctx" }
-    flushAndClose(ctx.channel())
-    flushAndClose(clientChannel)
+    try {
+      Timber.d { "($id) Close inactive relay channel: $ctx" }
+    } finally {
+      flushAndClose(ctx.channel())
+      flushAndClose(clientChannel)
+    }
   }
 
   override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
-    Timber.e(cause) { "(${hostName}:${port}) RelayChannel exception caught $ctx" }
-    flushAndClose(ctx.channel())
+    try {
+      Timber.e(cause) { "($id) RelayChannel exception caught $ctx" }
+    } finally {
+      flushAndClose(ctx.channel())
+    }
   }
 }
