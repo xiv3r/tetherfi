@@ -17,6 +17,7 @@
 package com.pyamsoft.tetherfi.server.proxy.session.netty
 
 import android.net.Network
+import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 
 /** Run this with a completely new [com.pyamsoft.tetherfi.server.proxy.manager.ProxyManager] */
@@ -26,25 +27,31 @@ class SuspendingNettyDelegatingProxy(
   port: Int,
   socketTagger: SocketTagger,
   androidPreferredNetwork: Network?,
+  isHttpEnabled: Boolean,
+  isSocksEnabled: Boolean,
+  serverSocketTimeout: ServerSocketTimeout,
   onOpened: () -> Unit,
   onClosing: () -> Unit,
   onError: (Throwable) -> Unit,
-) : com.pyamsoft.tetherfi.server.proxy.session.netty.SuspendingNettyProxy() {
+) : SuspendingNettyProxy() {
 
   private val proxy by lazy {
-    _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.NettyDelegatingProxy(
+    NettyDelegatingProxy(
       isDebug = isDebug,
       host = host,
       port = port,
       socketTagger = socketTagger,
       androidPreferredNetwork = androidPreferredNetwork,
+      isHttpEnabled = isHttpEnabled,
+      isSocksEnabled = isSocksEnabled,
+      serverSocketTimeout = serverSocketTimeout,
       onOpened = onOpened,
       onClosing = onClosing,
       onError = onError,
     )
   }
 
-  override fun provideProxy(): com.pyamsoft.tetherfi.server.proxy.session.netty.NettyProxy {
+  override fun provideProxy(): NettyProxy {
     return proxy
   }
 }

@@ -19,6 +19,7 @@ package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks
 import android.net.Network
 import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.core.Timber
+import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import com.pyamsoft.tetherfi.server.proxy.session.netty.dropHandler
 import io.ktor.util.network.address
@@ -38,10 +39,12 @@ internal class Socks4ProxyHandler internal constructor(
   socketTagger: SocketTagger,
   androidPreferredNetwork: Network?,
   isDebug: Boolean,
-) : com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.SocksProxyHandler<Socks4CommandRequest>(
+  serverSocketTimeout: ServerSocketTimeout,
+) : SocksProxyHandler<Socks4CommandRequest>(
   socketTagger = socketTagger,
   androidPreferredNetwork = androidPreferredNetwork,
   isDebug = isDebug,
+  serverSocketTimeout = serverSocketTimeout,
 ) {
 
   @CheckResult

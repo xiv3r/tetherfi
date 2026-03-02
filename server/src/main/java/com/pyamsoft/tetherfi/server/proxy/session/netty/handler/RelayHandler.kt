@@ -34,7 +34,7 @@ internal constructor(
     }
 
     if (msg is ByteBuf) {
-      val byteCount = msg.readableBytes().toLong()
+      msg.readableBytes().toLong()
       // TODO Record amount consumed
       //      Timber.d { "(${hostName}:${port}) Read $byteCount bytes" }
       // TODO bandwidth limit enforcement
@@ -57,10 +57,8 @@ internal constructor(
     try {
       Timber.d { "($id) Close inactive relay channel: $ctx" }
     } finally {
-      _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.flushAndClose(ctx.channel())
-      _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.flushAndClose(
-        clientChannel
-      )
+      flushAndClose(ctx.channel())
+      flushAndClose(clientChannel)
     }
   }
 
@@ -68,7 +66,7 @@ internal constructor(
     try {
       Timber.e(cause) { "($id) RelayChannel exception caught $ctx" }
     } finally {
-      _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.flushAndClose(ctx.channel())
+      flushAndClose(ctx.channel())
     }
   }
 }

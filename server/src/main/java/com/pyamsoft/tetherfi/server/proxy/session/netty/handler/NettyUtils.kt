@@ -46,7 +46,7 @@ internal fun createOutboundChannel(
   onChannelOpened: (Channel) -> Unit = {},
 ): Bootstrap {
   return Bootstrap().group(channel.eventLoop()).channelFactory(
-    _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.NetworkBoundSocketChannelFactory(
+    NetworkBoundSocketChannelFactory(
       socketTagger = socketTagger,
       androidPreferredNetwork = androidPreferredNetwork,
     )
@@ -61,7 +61,7 @@ internal fun createOutboundChannel(
 
       // Once our connection to the internet is made, relay data in tunnel
       pipeline.addLast(
-        _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.RelayHandler(
+        RelayHandler(
           id,
           channel
         )
@@ -79,7 +79,7 @@ private fun createOutboundDatagramChannel(
   onChannelOpened: (Channel) -> Unit = {},
 ): Bootstrap {
   return Bootstrap().group(channel.eventLoop()).channelFactory(
-    _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.NetworkBoundDatagramChannelFactory(
+    NetworkBoundDatagramChannelFactory(
       socketTagger = socketTagger,
       androidPreferredNetwork = androidPreferredNetwork,
     )
@@ -105,7 +105,7 @@ internal fun newOutboundConnection(
   androidPreferredNetwork: Network?,
   onChannelOpened: (Channel) -> Unit = {},
 ): ChannelFuture {
-  return _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.createOutboundChannel(
+  return createOutboundChannel(
     isDebug = isDebug,
     id = "$hostName:$port",
     channel = channel,
@@ -127,7 +127,7 @@ internal fun newDatagramServer(
   androidPreferredNetwork: Network?,
   onChannelOpened: (Channel) -> Unit = {},
 ): ChannelFuture {
-  return _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.createOutboundDatagramChannel(
+  return createOutboundDatagramChannel(
     isDebug = isDebug,
     channel = channel,
     socketTagger = socketTagger,

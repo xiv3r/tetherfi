@@ -18,31 +18,43 @@ package com.pyamsoft.tetherfi.server.proxy.session.netty.handler
 
 import android.net.Network
 import com.pyamsoft.tetherfi.core.Timber
+import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import io.netty.channel.ChannelHandlerContext
+import io.netty.handler.timeout.IdleState
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
 import io.netty.util.ReferenceCountUtil
+import java.util.concurrent.TimeUnit
 
 internal abstract class DefaultProxyHandler internal constructor(
   socketTagger: SocketTagger,
   androidPreferredNetwork: Network?,
   isDebug: Boolean,
-) : com.pyamsoft.tetherfi.server.proxy.session.netty.handler.ProxyHandler(
+  private val serverSocketTimeout: ServerSocketTimeout,
+) : ProxyHandler(
   socketTagger = socketTagger,
   androidPreferredNetwork = androidPreferredNetwork,
   isDebug = isDebug,
 ) {
 
   override fun channelRegistered(ctx: ChannelHandlerContext) {
-    Timber.d { "Add idle timeout handler" }
-    ctx.pipeline().addFirst("idle", IdleStateHandler(0, 0, 60))
+    val timeout = serverSocketTimeout.timeoutDuration
+    if (timeout.isInfinite()) {
+      Timber.d { "Add idle timeout handler $timeout" }
+      ctx.pipeline()
+        .addFirst(IdleStateHandler(0, 0, timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS))
+    } else {
+      Timber.d { "Not adding idle timeout, infinite timeout configured!" }
+    }
   }
 
   override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
     if (evt is IdleStateEvent) {
-      Timber.d { "Closing idle connection: $ctx $evt" }
-      closeChannels(ctx)
+      if (evt.state() == IdleState.ALL_IDLE) {
+        Timber.d { "Closing idle connection: $ctx $evt" }
+        closeChannels(ctx)
+      }
     }
   }
 

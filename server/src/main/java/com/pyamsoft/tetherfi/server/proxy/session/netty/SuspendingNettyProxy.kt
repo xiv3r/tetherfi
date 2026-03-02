@@ -29,7 +29,7 @@ abstract class SuspendingNettyProxy internal constructor() {
   private val proxy by lazy { provideProxy() }
 
   private suspend fun startProxy() {
-    var stopper: com.pyamsoft.tetherfi.server.proxy.session.netty.NettyServerStopper? = null
+    var stopper: NettyServerStopper? = null
     try {
       stopper = proxy.start()
       awaitCancellation()
@@ -50,5 +50,5 @@ abstract class SuspendingNettyProxy internal constructor() {
     }
   }
 
-  @CheckResult protected abstract fun provideProxy(): com.pyamsoft.tetherfi.server.proxy.session.netty.NettyProxy
+  @CheckResult protected abstract fun provideProxy(): NettyProxy
 }

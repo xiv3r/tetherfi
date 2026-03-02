@@ -20,6 +20,7 @@ import android.net.Network
 import androidx.annotation.CheckResult
 import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
+import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import com.pyamsoft.tetherfi.server.proxy.session.netty.dropHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.newDatagramServer
@@ -46,10 +47,12 @@ internal class Socks5ProxyHandler internal constructor(
   socketTagger: SocketTagger,
   androidPreferredNetwork: Network?,
   isDebug: Boolean,
-) : com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.SocksProxyHandler<Socks5CommandRequest>(
+  serverSocketTimeout: ServerSocketTimeout,
+) : SocksProxyHandler<Socks5CommandRequest>(
   socketTagger = socketTagger,
   androidPreferredNetwork = androidPreferredNetwork,
   isDebug = isDebug,
+  serverSocketTimeout = serverSocketTimeout,
 ) {
 
   @CheckResult
@@ -90,7 +93,7 @@ internal class Socks5ProxyHandler internal constructor(
     }
 
     val updControlSocket =
-      _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.newDatagramServer(
+      newDatagramServer(
         isDebug = isDebug,
         channel = channel,
         hostName = serverHostName,
@@ -98,7 +101,7 @@ internal class Socks5ProxyHandler internal constructor(
         androidPreferredNetwork = androidPreferredNetwork,
       ) { ch ->
         ch.pipeline().addLast(
-          _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.UdpRelayHandler(
+          UdpRelayHandler(
             isDebug = isDebug,
             socketTagger = socketTagger,
             androidPreferredNetwork = androidPreferredNetwork,
@@ -146,14 +149,14 @@ internal class Socks5ProxyHandler internal constructor(
 
       // Tell proxy we've established connection so that NOW we can relay
       Timber.d { "Open UDP Relay: ${
-        _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.resolveSocks5AddressType(
+        resolveSocks5AddressType(
           relayControlAddress
         )
       } $relayControl" }
       ctx.writeAndFlush(
         DefaultSocks5CommandResponse(
           Socks5CommandStatus.SUCCESS,
-          _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.resolveSocks5AddressType(
+          resolveSocks5AddressType(
             relayControlAddress
           ),
           relayControl.address,
@@ -236,7 +239,7 @@ internal class Socks5ProxyHandler internal constructor(
     ctx.writeAndFlush(
       DefaultSocks5CommandResponse(
         Socks5CommandStatus.SUCCESS,
-        _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.resolveSocks5AddressType(
+        resolveSocks5AddressType(
           remoteAddress
         ),
         remote.address,

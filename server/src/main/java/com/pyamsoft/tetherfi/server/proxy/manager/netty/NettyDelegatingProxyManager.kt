@@ -17,6 +17,7 @@
 package com.pyamsoft.tetherfi.server.proxy.manager.netty
 
 import android.net.Network
+import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.broadcast.BroadcastNetworkStatus
 import com.pyamsoft.tetherfi.server.network.SocketBinder
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
@@ -32,6 +33,9 @@ internal constructor(
     private val socketTagger: SocketTagger,
     private val hostConnection: BroadcastNetworkStatus.ConnectionInfo.Connected,
     private val port: Int,
+  private val isHttpEnabled: Boolean,
+  private val isSocksEnabled: Boolean,
+  private val serverSocketTimeout: ServerSocketTimeout,
 ) :
     NettyProxyManager(
         socketBinder = socketBinder,
@@ -44,12 +48,15 @@ internal constructor(
       onOpened: suspend () -> Unit,
       onClosing: suspend () -> Unit,
       onError: suspend (Throwable) -> Unit,
-  ): com.pyamsoft.tetherfi.server.proxy.session.netty.SuspendingNettyProxy {
-    return _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.SuspendingNettyDelegatingProxy(
+  ): SuspendingNettyProxy {
+    return SuspendingNettyDelegatingProxy(
       isDebug = isDebug,
       host = hostConnection.hostName,
       port = port,
       socketTagger = socketTagger,
+      isHttpEnabled = isHttpEnabled,
+      isSocksEnabled = isSocksEnabled,
+      serverSocketTimeout = serverSocketTimeout,
       androidPreferredNetwork = network,
       onOpened = { launch { onOpened() } },
       onClosing = { launch { onClosing() } },

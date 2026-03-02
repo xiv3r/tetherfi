@@ -53,16 +53,16 @@ internal class UdpRelayUpstreamHandler internal constructor(
     return alloc.ioBuffer().apply {
       // 2 reserved
       val res =
-        _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.RESERVED_BYTE_INT
+        RESERVED_BYTE_INT
       writeByte(res)
       writeByte(res)
 
       // No fragment
-      writeByte(_root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.FRAGMENT_ZERO_INT)
+      writeByte(FRAGMENT_ZERO_INT)
 
       // Address
       writeByte(
-        _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.resolveSocks5AddressType(
+        resolveSocks5AddressType(
           sourceAddr
         ).byteValue().toInt())
       writeBytes(sourceAddr.address.address)
@@ -86,7 +86,7 @@ internal class UdpRelayUpstreamHandler internal constructor(
   private fun closeChannels(ctx: ChannelHandlerContext) {
     if (udpControlChannel.isActive) {
       Timber.d { "close control channel $udpControlChannel" }
-      _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.flushAndClose(
+      flushAndClose(
         udpControlChannel
       )
     }
@@ -94,7 +94,7 @@ internal class UdpRelayUpstreamHandler internal constructor(
     val channel = ctx.channel()
     if (channel.isActive) {
       Timber.d { "close owner channel $channel" }
-      _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.flushAndClose(
+      flushAndClose(
         channel
       )
     }

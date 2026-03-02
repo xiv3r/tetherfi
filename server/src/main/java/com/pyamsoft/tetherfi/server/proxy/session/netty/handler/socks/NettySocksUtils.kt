@@ -30,8 +30,8 @@ internal fun resolveSocks5AddressType(localAddr: InetSocketAddress): Socks5Addre
 }
 
 internal const val RESERVED_BYTE: Byte = 0
-internal const val RESERVED_BYTE_INT: Int = _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.RESERVED_BYTE.toInt()
+internal const val RESERVED_BYTE_INT: Int = RESERVED_BYTE.toInt()
 
 // We do NOT support fragments, anything other than the 0 byte should be dropped
 internal const val FRAGMENT_ZERO: Byte = 0
-internal const val FRAGMENT_ZERO_INT: Int = _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.FRAGMENT_ZERO.toInt()
+internal const val FRAGMENT_ZERO_INT: Int = FRAGMENT_ZERO.toInt()

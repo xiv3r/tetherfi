@@ -19,6 +19,7 @@ package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks
 import android.net.Network
 import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.core.Timber
+import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import com.pyamsoft.tetherfi.server.proxy.session.netty.dropHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.DefaultProxyHandler
@@ -35,10 +36,12 @@ internal abstract class SocksProxyHandler<T : SocksMessage> internal constructor
   socketTagger: SocketTagger,
   androidPreferredNetwork: Network?,
   isDebug: Boolean,
-) : com.pyamsoft.tetherfi.server.proxy.session.netty.handler.DefaultProxyHandler(
+  serverSocketTimeout: ServerSocketTimeout,
+) : DefaultProxyHandler(
   socketTagger = socketTagger,
   androidPreferredNetwork = androidPreferredNetwork,
   isDebug = isDebug,
+  serverSocketTimeout = serverSocketTimeout,
 ) {
 
   protected fun handleSocksConnectRequest(
@@ -85,7 +88,7 @@ internal abstract class SocksProxyHandler<T : SocksMessage> internal constructor
     }
 
     val connectSocket =
-      _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.newOutboundConnection(
+      newOutboundConnection(
         isDebug = isDebug,
         channel = channel,
         hostName = dstAddr,
@@ -115,7 +118,7 @@ internal abstract class SocksProxyHandler<T : SocksMessage> internal constructor
 
       // Add a relay for the internet outbound
       pipeline.addLast(
-        _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.RelayHandler(
+        RelayHandler(
           "SOCKS${msg.version()}-CONNECT-${dstAddr}:${dstPort}",
           outbound
         )

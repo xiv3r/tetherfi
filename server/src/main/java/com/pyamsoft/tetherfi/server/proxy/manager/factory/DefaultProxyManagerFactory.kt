@@ -36,132 +36,151 @@ import com.pyamsoft.tetherfi.server.proxy.manager.TcpProxyManager
 import com.pyamsoft.tetherfi.server.proxy.manager.netty.NettyDelegatingProxyManager
 import com.pyamsoft.tetherfi.server.proxy.session.ProxySession
 import com.pyamsoft.tetherfi.server.proxy.session.tcp.TcpProxyData
-import javax.inject.Inject
-import javax.inject.Named
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
+import javax.inject.Named
+import kotlin.time.Duration.Companion.seconds
 
 internal class DefaultProxyManagerFactory
 @Inject
 internal constructor(
-    @param:ServerInternalApi private val socketBinder: SocketBinder,
-    @param:Named("debug") private val isDebug: Boolean,
-    @param:Named("app_scope") private val appScope: CoroutineScope,
-    @param:Named("http") private val httpSession: ProxySession<TcpProxyData>,
-    @param:Named("socks") private val socksSession: ProxySession<TcpProxyData>,
-    private val expertPreferences: ExpertPreferences,
-    private val socketTagger: SocketTagger,
-    private val enforcer: ThreadEnforcer,
-    private val proxyPreferences: ProxyPreferences,
-    private val appEnvironment: AppDevEnvironment,
-    private val serverStopConsumer: EventConsumer<ServerStopRequestEvent>,
+  @param:ServerInternalApi private val socketBinder: SocketBinder,
+  @param:Named("debug") private val isDebug: Boolean,
+  @param:Named("app_scope") private val appScope: CoroutineScope,
+  @param:Named("http") private val httpSession: ProxySession<TcpProxyData>,
+  @param:Named("socks") private val socksSession: ProxySession<TcpProxyData>,
+  private val expertPreferences: ExpertPreferences,
+  private val socketTagger: SocketTagger,
+  private val enforcer: ThreadEnforcer,
+  private val proxyPreferences: ProxyPreferences,
+  private val appEnvironment: AppDevEnvironment,
+  private val serverStopConsumer: EventConsumer<ServerStopRequestEvent>,
 ) : ProxyManager.Factory {
-
-  private val USE_NEW_NETTY = true
 
   @CheckResult
   private fun createTcp(
-      proxyType: SharedProxy.Type,
-      session: ProxySession<TcpProxyData>,
-      info: BroadcastNetworkStatus.ConnectionInfo.Connected,
-      socketCreator: SocketCreator,
-      dispatcher: ServerDispatcher,
-      port: Int,
+    proxyType: SharedProxy.Type,
+    session: ProxySession<TcpProxyData>,
+    info: BroadcastNetworkStatus.ConnectionInfo.Connected,
+    socketCreator: SocketCreator,
+    dispatcher: ServerDispatcher,
+    port: Int,
   ): ProxyManager {
     enforcer.assertOffMainThread()
 
     return TcpProxyManager(
-        appScope = appScope,
-        socketTagger = socketTagger,
-        appEnvironment = appEnvironment,
-        yoloRepeatDelay = 3.seconds,
-        enforcer = enforcer,
-        serverStopConsumer = serverStopConsumer,
-        socketBinder = socketBinder,
-        expertPreferences = expertPreferences,
-        proxyType = proxyType,
-        session = session,
-        hostConnection = info,
-        port = port,
-        serverDispatcher = dispatcher,
-        socketCreator = socketCreator,
+      appScope = appScope,
+      socketTagger = socketTagger,
+      appEnvironment = appEnvironment,
+      yoloRepeatDelay = 3.seconds,
+      enforcer = enforcer,
+      serverStopConsumer = serverStopConsumer,
+      socketBinder = socketBinder,
+      expertPreferences = expertPreferences,
+      proxyType = proxyType,
+      session = session,
+      hostConnection = info,
+      port = port,
+      serverDispatcher = dispatcher,
+      socketCreator = socketCreator,
+    )
+  }
+
+  @CheckResult
+  private suspend fun createNetty(
+    info: BroadcastNetworkStatus.ConnectionInfo.Connected,
+  ): ProxyManager {
+    enforcer.assertOffMainThread()
+
+    // In netty mode, we all share a port
+    val port = proxyPreferences.listenForHttpPortChanges().first()
+
+    val isHttpEnabled = proxyPreferences.listenForHttpEnabledChanges().first()
+    val isSocksEnabled = proxyPreferences.listenForSocksEnabledChanges().first()
+    val socketTimeout = expertPreferences.listenForSocketTimeout().first()
+
+    Timber.d { "Using new Netty server" }
+    return NettyDelegatingProxyManager(
+      isDebug = isDebug,
+      socketBinder = socketBinder,
+      socketTagger = socketTagger,
+      isHttpEnabled = isHttpEnabled,
+      isSocksEnabled = isSocksEnabled,
+      serverSocketTimeout = socketTimeout,
+      hostConnection = info,
+      port = port,
     )
   }
 
   @CheckResult
   private suspend fun createHttp(
-      info: BroadcastNetworkStatus.ConnectionInfo.Connected,
-      socketCreator: SocketCreator,
-      dispatcher: ServerDispatcher,
+    info: BroadcastNetworkStatus.ConnectionInfo.Connected,
+    socketCreator: SocketCreator,
+    dispatcher: ServerDispatcher,
   ): ProxyManager {
     enforcer.assertOffMainThread()
 
     val port = proxyPreferences.listenForHttpPortChanges().first()
 
-    if (USE_NEW_NETTY) {
-      Timber.d { "Using new Netty server" }
-      return NettyDelegatingProxyManager(
-          isDebug = isDebug,
-          socketBinder = socketBinder,
-          socketTagger = socketTagger,
-          hostConnection = info,
-          port = port,
-      )
-    }
-
     return createTcp(
-        proxyType = SharedProxy.Type.HTTP,
-        session = httpSession,
-        info = info,
-        socketCreator = socketCreator,
-        dispatcher = dispatcher,
-        port = port,
+      proxyType = SharedProxy.Type.HTTP,
+      session = httpSession,
+      info = info,
+      socketCreator = socketCreator,
+      dispatcher = dispatcher,
+      port = port,
     )
   }
 
   @CheckResult
   private suspend fun createSocks(
-      info: BroadcastNetworkStatus.ConnectionInfo.Connected,
-      socketCreator: SocketCreator,
-      dispatcher: ServerDispatcher,
+    info: BroadcastNetworkStatus.ConnectionInfo.Connected,
+    socketCreator: SocketCreator,
+    dispatcher: ServerDispatcher,
   ): ProxyManager {
     enforcer.assertOffMainThread()
 
     val port = proxyPreferences.listenForSocksPortChanges().first()
 
     return createTcp(
-        proxyType = SharedProxy.Type.SOCKS,
-        session = socksSession,
-        info = info,
-        socketCreator = socketCreator,
-        dispatcher = dispatcher,
-        port = port,
+      proxyType = SharedProxy.Type.SOCKS,
+      session = socksSession,
+      info = info,
+      socketCreator = socketCreator,
+      dispatcher = dispatcher,
+      port = port,
     )
   }
 
   override suspend fun create(
-      type: SharedProxy.Type,
-      info: BroadcastNetworkStatus.ConnectionInfo.Connected,
-      socketCreator: SocketCreator,
-      serverDispatcher: ServerDispatcher,
+    type: SharedProxy.Type,
+    info: BroadcastNetworkStatus.ConnectionInfo.Connected,
+    socketCreator: SocketCreator,
+    serverDispatcher: ServerDispatcher,
   ): ProxyManager =
-      withContext(context = Dispatchers.Default) {
-        return@withContext when (type) {
-          SharedProxy.Type.HTTP ->
-              createHttp(
-                  info = info,
-                  socketCreator = socketCreator,
-                  dispatcher = serverDispatcher,
-              )
-          SharedProxy.Type.SOCKS ->
-              createSocks(
-                  info = info,
-                  socketCreator = socketCreator,
-                  dispatcher = serverDispatcher,
-              )
-        }
+    withContext(context = Dispatchers.Default) {
+      return@withContext when (type) {
+        SharedProxy.Type.NETTY ->
+          createNetty(
+            info = info,
+          )
+
+        SharedProxy.Type.HTTP ->
+          createHttp(
+            info = info,
+            socketCreator = socketCreator,
+            dispatcher = serverDispatcher,
+          )
+
+        SharedProxy.Type.SOCKS ->
+          createSocks(
+            info = info,
+            socketCreator = socketCreator,
+            dispatcher = serverDispatcher,
+          )
       }
+    }
 }

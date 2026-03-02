@@ -20,72 +20,72 @@ import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import io.netty.bootstrap.ServerBootstrap
-import io.netty.channel.ChannelInitializer
 import io.netty.channel.MultiThreadIoEventLoopGroup
-import io.netty.channel.SingleThreadIoEventLoop
 import io.netty.channel.nio.NioIoHandler
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 
 abstract class NettyProxy
 protected constructor(
-    private val socketTagger: SocketTagger,
-    private val host: String,
-    private val port: Int,
-    private val onOpened: () -> Unit,
-    private val onClosing: () -> Unit,
-    private val onError: (Throwable) -> Unit,
+  private val socketTagger: SocketTagger,
+  private val host: String,
+  private val port: Int,
+  private val onOpened: () -> Unit,
+  private val onClosing: () -> Unit,
+  private val onError: (Throwable) -> Unit,
 ) {
 
   @CheckResult
-  fun start(): com.pyamsoft.tetherfi.server.proxy.session.netty.NettyServerStopper {
+  fun start(): NettyServerStopper {
     // The boss group usually does not need more than a single thread allocated to it
     val bossGroup = MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory())
     val workerGroup = MultiThreadIoEventLoopGroup(NioIoHandler.newFactory())
 
     val bootstrap =
-        ServerBootstrap()
-            .group(bossGroup, workerGroup)
-            .channel(NioServerSocketChannel::class.java)
-            .childHandler(
-                object : io.netty.channel.ChannelInitializer<SocketChannel>() {
-                  override fun initChannel(ch: SocketChannel) {
-                    onChannelInitialized(ch)
-                  }
-                }
-            )
+      ServerBootstrap()
+        .group(bossGroup, workerGroup)
+        .channel(NioServerSocketChannel::class.java)
+        .childHandler(
+          object : io.netty.channel.ChannelInitializer<SocketChannel>() {
+            override fun initChannel(ch: SocketChannel) {
+              onChannelInitialized(ch)
+            }
+          }
+        )
 
     // Tag the server socket
     socketTagger.tagSocket()
 
     val serverChannel =
-        bootstrap
-            .bind(host, port)
-            .apply {
-              _root_ide_package_.io.netty.channel.ChannelFuture.addListener { future ->
-                if (future.isSuccess) {
-                  Timber.d { "Netty server started" }
-                  onOpened()
-                } else {
-                  val err = future.cause()
-                  Timber.e(err) { "Failed to bind netty server" }
-                  onError(err)
-                }
-              }
+      bootstrap
+        .bind(host, port)
+        .apply {
+          addListener { future ->
+            if (future.isSuccess) {
+              Timber.d { "Netty server started" }
+              onOpened()
+            } else {
+              val err = future.cause()
+              Timber.e(err) { "Failed to bind netty server" }
+              onError(err)
             }
-            .channel()
-            .apply {
-              _root_ide_package_.io.netty.channel.Channel.closeFuture().addListener {
-                Timber.d { "Netty server is closing!" }
-                onClosing()
-              }
-            }
+          }
+        }
+        .channel()
+        .apply {
+          closeFuture().addListener {
+            Timber.d { "Netty server is closing!" }
+            onClosing()
+
+            Timber.d { "Shutdown thread pools" }
+            bossGroup.shutdownGracefully()
+            workerGroup.shutdownGracefully()
+          }
+        }
 
     return {
       Timber.d { "Stopping Netty server gracefully" }
       serverChannel.close()
-      bossGroup.shutdownGracefully()
-      workerGroup.shutdownGracefully()
     }
   }
 

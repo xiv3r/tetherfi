@@ -31,5 +31,10 @@ interface SharedProxy : Server {
   enum class Type {
     HTTP,
     SOCKS,
+
+    /**
+     * New engine
+     */
+    NETTY,
   }
 }

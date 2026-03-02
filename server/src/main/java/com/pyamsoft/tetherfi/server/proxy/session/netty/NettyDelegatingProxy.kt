@@ -18,6 +18,7 @@ package com.pyamsoft.tetherfi.server.proxy.session.netty
 
 import android.net.Network
 import com.pyamsoft.tetherfi.core.Timber
+import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import com.pyamsoft.tetherfi.server.proxy.session.netty.dropHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.http.Http1ProxyHandler
@@ -44,11 +45,14 @@ internal constructor(
   private val isDebug: Boolean,
   private val socketTagger: SocketTagger,
   private val androidPreferredNetwork: Network?,
+  private val isHttpEnabled: Boolean,
+  private val isSocksEnabled: Boolean,
+  private val serverSocketTimeout: ServerSocketTimeout,
   onOpened: () -> Unit,
   onClosing: () -> Unit,
   onError: (Throwable) -> Unit,
 ) :
-  com.pyamsoft.tetherfi.server.proxy.session.netty.NettyProxy(
+  NettyProxy(
     socketTagger = socketTagger,
     host = host,
     port = port,
@@ -66,12 +70,15 @@ internal constructor(
 
     // And bind our proxy relay handler
     pipeline.addLast(
-      _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.DelegatingHandler(
+      DelegatingHandler(
         serverHostName = host,
         serverPort = port,
         isDebug = isDebug,
         socketTagger = socketTagger,
         androidPreferredNetwork = androidPreferredNetwork,
+        isHttpEnabled = isHttpEnabled,
+        isSocksEnabled = isSocksEnabled,
+        serverSocketTimeout = serverSocketTimeout,
       )
     )
   }
@@ -83,7 +90,10 @@ private class DelegatingHandler(
   private val isDebug: Boolean,
   private val socketTagger: SocketTagger,
   private val androidPreferredNetwork: Network?,
-) : io.netty.handler.codec.ByteToMessageDecoder() {
+  private val isHttpEnabled: Boolean,
+  private val isSocksEnabled: Boolean,
+  private val serverSocketTimeout: ServerSocketTimeout,
+) : ByteToMessageDecoder() {
 
   override fun decode(
     ctx: ChannelHandlerContext,
@@ -91,13 +101,15 @@ private class DelegatingHandler(
     out: List<Any>
   ) {
     if (!input.isReadable) {
-      Timber.w { "Unreadable input buffer sent. Drop!" }
+      Timber.w { "DROP: Unreadable input buffer sent." }
       return
     }
 
     // Copied from SocksPortUnificationServerHandler.java
     val readerIndex = input.readerIndex()
-    if (input.writerIndex() == readerIndex) {
+    val writerIndex = input.writerIndex()
+    if (writerIndex == readerIndex) {
+      Timber.w { "DROP: Bad input writer index saw=$writerIndex expect=$readerIndex" }
       return
     }
 
@@ -108,44 +120,62 @@ private class DelegatingHandler(
     try {
       when (socksVersion) {
         SocksVersion.SOCKS4a -> {
+          if (!isSocksEnabled) {
+            Timber.w { "DROP: SOCKS4a traffic received but SOCKS was not enabled" }
+            return
+          }
+
           // Assume SOCKS4
           pipeline.addLast(Socks4ServerEncoder.INSTANCE)
           pipeline.addLast(Socks4ServerDecoder())
 
           pipeline.addLast(
-            _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.Socks4ProxyHandler(
+            Socks4ProxyHandler(
               isDebug = isDebug,
               socketTagger = socketTagger,
               androidPreferredNetwork = androidPreferredNetwork,
+              serverSocketTimeout = serverSocketTimeout,
             )
           )
         }
 
         SocksVersion.SOCKS5 -> {
+          if (!isSocksEnabled) {
+            Timber.w { "DROP: SOCKS5 traffic received but SOCKS was not enabled" }
+            return
+          }
+
           // Assume SOCKS5
           pipeline.addLast(Socks5ServerEncoder.DEFAULT)
           pipeline.addLast(Socks5InitialRequestDecoder())
           pipeline.addLast(Socks5CommandRequestDecoder())
 
           pipeline.addLast(
-            _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.Socks5ProxyHandler(
+            Socks5ProxyHandler(
               serverHostName = serverHostName,
               isDebug = isDebug,
               socketTagger = socketTagger,
               androidPreferredNetwork = androidPreferredNetwork,
+              serverSocketTimeout = serverSocketTimeout,
             )
           )
         }
         else -> {
+          if (!isHttpEnabled) {
+            Timber.w { "DROP: HTTP traffic received but HTTP was not enabled" }
+            return
+          }
+
           // Assume HTTP
           pipeline.addLast(HttpServerCodec())
 
           // And bind our proxy relay handler
           pipeline.addLast(
-            _root_ide_package_.com.pyamsoft.tetherfi.server.proxy.session.netty.handler.http.Http1ProxyHandler(
+            Http1ProxyHandler(
               isDebug = isDebug,
               socketTagger = socketTagger,
               androidPreferredNetwork = androidPreferredNetwork,
+              serverSocketTimeout = serverSocketTimeout,
             )
           )
         }

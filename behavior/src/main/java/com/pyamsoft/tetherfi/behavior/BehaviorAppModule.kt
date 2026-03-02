@@ -16,6 +16,8 @@
 
 package com.pyamsoft.tetherfi.behavior
 
+import com.pyamsoft.tetherfi.behavior.tweaks.DefaultScreenOnHandler
+import com.pyamsoft.tetherfi.behavior.tweaks.ScreenOnHandler
 import dagger.Binds
 import dagger.Module
 
@@ -24,6 +26,6 @@ abstract class BehaviorAppModule {
 
   @Binds
   internal abstract fun bindScreenOnHandler(
-      impl: com.pyamsoft.tetherfi.behavior.tweaks.DefaultScreenOnHandler
-  ): com.pyamsoft.tetherfi.behavior.tweaks.ScreenOnHandler
+    impl: DefaultScreenOnHandler
+  ): ScreenOnHandler
 }
