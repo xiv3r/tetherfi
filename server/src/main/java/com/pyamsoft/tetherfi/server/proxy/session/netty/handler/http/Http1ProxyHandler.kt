@@ -208,7 +208,7 @@ internal constructor(
       replayQueuedMessages(outbound)
 
       // All messages have been replayed, drop the client codec
-      pipeline.dropHandler(HttpClientCodec::class)
+      outbound.pipeline().dropHandler(HttpClientCodec::class)
 
       // Remove the http server codec
       pipeline.dropHandler(HttpServerCodec::class)
