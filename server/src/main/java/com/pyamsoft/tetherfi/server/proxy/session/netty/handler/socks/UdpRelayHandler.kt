@@ -22,8 +22,6 @@ import com.pyamsoft.pydroid.core.requireNotNull
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
-import com.pyamsoft.tetherfi.server.proxy.session.netty.NetworkBoundDatagramChannelFactory
-import com.pyamsoft.tetherfi.server.proxy.session.netty.NetworkBoundSocketChannelFactory
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.ProxyHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.flushAndClose
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.newDatagramServer
@@ -40,14 +38,12 @@ import io.netty.handler.codec.socksx.v5.Socks5CommandStatus
 import io.netty.handler.timeout.IdleState
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
-import io.netty.resolver.ResolvedAddressTypes
 import io.netty.resolver.dns.AuthoritativeDnsServerCache
 import io.netty.resolver.dns.DefaultAuthoritativeDnsServerCache
 import io.netty.resolver.dns.DefaultDnsCache
 import io.netty.resolver.dns.DefaultDnsCnameCache
 import io.netty.resolver.dns.DnsCache
 import io.netty.resolver.dns.DnsCnameCache
-import io.netty.resolver.dns.DnsNameResolverBuilder
 import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.InetAddress
@@ -80,11 +76,10 @@ internal constructor(
 
   private fun resolveDestination(
       ctx: ChannelHandlerContext,
-      msg: DatagramPacket,
       addressType: Socks5AddressType,
       originalDestinationAddress: String,
       port: Int,
-      onResolved: (InetSocketAddress) -> Unit,
+      onResolved: (InetSocketAddress?) -> Unit,
   ) {
     // We don't need to force resolve an IPv4, just continue
     if (!isForcedIPv4Upstream || addressType == Socks5AddressType.IPv4) {
@@ -98,53 +93,32 @@ internal constructor(
     // and then we proxy the connection from our requesting client
     //
     // If we are unable to find an IPv4 address to use, we must fail
+    //
+    // We can't use the Netty built in DnsResolver? It never resolves for some reason...
     Timber.d { "Forcing UDP over IPv4 connection $addressType $originalDestinationAddress" }
-    val resolver =
-        DnsNameResolverBuilder(ctx.channel().eventLoop())
-            .datagramChannelFactory(
-                NetworkBoundDatagramChannelFactory(
-                    socketTagger = socketTagger,
-                    androidPreferredNetwork = androidPreferredNetwork,
-                )
-            )
-            .socketChannelFactory(
-                NetworkBoundSocketChannelFactory(
-                    socketTagger = socketTagger,
-                    androidPreferredNetwork = androidPreferredNetwork,
-                )
-            )
-            .resolveCache(DEFAULT_DNS_CACHE)
-            .cnameCache(DEFAULT_DNS_CNAME_CACHE)
-            .authoritativeDnsServerCache(DEFAULT_DNS_AUTHORITATIVE_SERVER_CACHE)
-            .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
-            .build()
+    ctx.executor().execute {
+      try {
+        val ip4Address =
+            InetAddress.getAllByName(originalDestinationAddress)
+                // Only IPv4 addresses
+                .filterIsInstance<Inet4Address>()
+                // Pick a random one
+                .randomOrNull()
+                ?.hostAddress
 
-    resolver.resolve(originalDestinationAddress).addListener { future ->
-      // Close the resolver once we are done with this lookup
-      // we use custom cache implementations that never clear though to avoid having to
-      // re-lookup data
-      //
-      // Caches can be dropped via the static dropCaches() method once the server is closed
-      resolver.use {
-        if (future.isSuccess) {
-          val address = future.now.cast<Inet4Address>()
-          if (address != null) {
-            val destination = InetSocketAddress(address, port)
-            onResolved(destination)
-          } else {
-            Timber.w { "No IPv4 address could be found for dest=$originalDestinationAddress" }
-            Timber.w { "Currently SOCKS5 UDP-ASSOCIATE proxy only works over IPv4" }
-            sendErrorAndClose(ctx, msg)
-            return@addListener
-          }
+        if (ip4Address != null) {
+          val destination = InetSocketAddress(ip4Address, port)
+          Timber.d { "RESOLVED IPv4 $destination" }
+          onResolved(destination)
         } else {
-          Timber.e(future.cause()) {
-            "Unable to resolve IPv4 address for dest=$originalDestinationAddress"
-          }
+          Timber.w { "No IPv4 address could be found for dest=$originalDestinationAddress" }
           Timber.w { "Currently SOCKS5 UDP-ASSOCIATE proxy only works over IPv4" }
-          sendErrorAndClose(ctx, msg)
-          return@addListener
+          onResolved(null)
         }
+      } catch (e: Throwable) {
+        Timber.e(e) { "Unable to resolve IPv4 address for dest=$originalDestinationAddress" }
+        Timber.w { "Currently SOCKS5 UDP-ASSOCIATE proxy only works over IPv4" }
+        onResolved(null)
       }
     }
   }
@@ -201,11 +175,16 @@ internal constructor(
     //              and map the address over.
     resolveDestination(
         ctx = ctx,
-        msg = msg,
         addressType = addrType,
         originalDestinationAddress = destinationAddr,
         port = destinationPort,
         onResolved = { destination ->
+          if (destination == null) {
+            data.release()
+            sendErrorAndClose(ctx, msg)
+            return@resolveDestination
+          }
+
           val bindAddress =
               when (val type = resolveSocks5AddressType(destination)) {
                 Socks5AddressType.IPv4 -> "0.0.0.0"
@@ -214,6 +193,7 @@ internal constructor(
                   Timber.w {
                     "DROP: Unable to send datapacket upstream to invalid type address: $type $destination"
                   }
+                  data.release()
                   sendErrorAndClose(ctx, msg)
                   return@resolveDestination
                 }
@@ -234,7 +214,6 @@ internal constructor(
                                 serverSocketTimeout = serverSocketTimeout,
                                 udpControlChannel = serverChannel,
                                 client = sentFrom,
-                                packet = DatagramPacket(data, destination),
                             )
                         )
                   },
@@ -243,6 +222,7 @@ internal constructor(
           udpRelaySocket.addListener { future ->
             if (!future.isSuccess) {
               Timber.e(future.cause()) { "Failed to standup outbound connection!" }
+              data.release()
               sendErrorAndClose(ctx, msg)
               return@addListener
             }
@@ -253,6 +233,9 @@ internal constructor(
             // prematurely
             // assignOutboundChannel(outbound)
             allKnownOutbounds.update { it + outbound }
+
+            val packet = DatagramPacket(data, destination)
+            outbound.writeAndFlush(packet).addListener { packet.release() }
           }
         },
     )
@@ -321,11 +304,11 @@ internal constructor(
   override fun channelRegistered(ctx: ChannelHandlerContext) {
     val timeout = serverSocketTimeout.timeoutDuration
     if (timeout.isInfinite()) {
+      Timber.d { "Not adding idle timeout, infinite timeout configured!" }
+    } else {
       Timber.d { "Add idle timeout handler $timeout" }
       ctx.pipeline()
           .addFirst(IdleStateHandler(0, 0, timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS))
-    } else {
-      Timber.d { "Not adding idle timeout, infinite timeout configured!" }
     }
   }
 

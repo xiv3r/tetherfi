@@ -33,7 +33,6 @@ import io.netty.channel.socket.DatagramPacket
 import io.netty.handler.timeout.IdleState
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
-import io.netty.util.ReferenceCountUtil
 import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit
 
@@ -41,7 +40,6 @@ internal class UdpRelayUpstreamHandler
 internal constructor(
     private val udpControlChannel: Channel,
     private val client: InetSocketAddress,
-    private val packet: DatagramPacket,
     private val serverSocketTimeout: ServerSocketTimeout,
 ) : ChannelInboundHandlerAdapter() {
 
@@ -97,11 +95,11 @@ internal constructor(
   override fun channelRegistered(ctx: ChannelHandlerContext) {
     val timeout = serverSocketTimeout.timeoutDuration
     if (timeout.isInfinite()) {
+      Timber.d { "Not adding idle timeout, infinite timeout configured!" }
+    } else {
       Timber.d { "Add idle timeout handler $timeout" }
       ctx.pipeline()
           .addFirst(IdleStateHandler(0, 0, timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS))
-    } else {
-      Timber.d { "Not adding idle timeout, infinite timeout configured!" }
     }
   }
 
@@ -124,8 +122,6 @@ internal constructor(
       Timber.d { "Closing UDP upstream relay because UDP control closed" }
       closeChannels(ctx)
     }
-
-    ctx.writeAndFlush(packet).addListener { ReferenceCountUtil.release(packet) }
   }
 
   override fun channelInactive(ctx: ChannelHandlerContext) {

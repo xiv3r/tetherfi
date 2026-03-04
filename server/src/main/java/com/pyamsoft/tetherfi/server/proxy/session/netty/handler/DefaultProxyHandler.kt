@@ -43,11 +43,11 @@ internal constructor(
   override fun channelRegistered(ctx: ChannelHandlerContext) {
     val timeout = serverSocketTimeout.timeoutDuration
     if (timeout.isInfinite()) {
+      Timber.d { "Not adding idle timeout, infinite timeout configured!" }
+    } else {
       Timber.d { "Add idle timeout handler $timeout" }
       ctx.pipeline()
           .addFirst(IdleStateHandler(0, 0, timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS))
-    } else {
-      Timber.d { "Not adding idle timeout, infinite timeout configured!" }
     }
   }
 
