@@ -16,6 +16,7 @@
 
 package com.pyamsoft.tetherfi.server.proxy
 
+import android.net.ConnectivityManager
 import androidx.annotation.CheckResult
 import com.pyamsoft.pydroid.bus.EventBus
 import com.pyamsoft.pydroid.core.ThreadEnforcer
@@ -115,6 +116,7 @@ internal constructor(
   }
 
   private suspend fun beginProxyLoop(
+      connectivityManager: ConnectivityManager,
       type: SharedProxy.Type,
       lock: Locker.Lock,
       info: BroadcastNetworkStatus.ConnectionInfo.Connected,
@@ -127,6 +129,7 @@ internal constructor(
       Timber.d { "${type.name} Begin proxy server loop: $info" }
       factory
           .create(
+              connectivityManager = connectivityManager,
               type = type,
               info = info,
               socketCreator = socketCreator,
@@ -153,6 +156,7 @@ internal constructor(
 
   private suspend fun proxyLoop(
       scope: CoroutineScope,
+      connectivityManager: ConnectivityManager,
       lock: Locker.Lock,
       info: BroadcastNetworkStatus.ConnectionInfo.Connected,
       socketCreator: SocketCreator,
@@ -173,6 +177,7 @@ internal constructor(
     if (isNettyEnabled) {
       scope.launch(context = Dispatchers.Default) {
         beginProxyLoop(
+            connectivityManager = connectivityManager,
             type = SharedProxy.Type.NETTY,
             lock = lock,
             info = info,
@@ -184,6 +189,7 @@ internal constructor(
       if (isHttpEnabled) {
         scope.launch(context = Dispatchers.Default) {
           beginProxyLoop(
+              connectivityManager = connectivityManager,
               type = SharedProxy.Type.HTTP,
               lock = lock,
               info = info,
@@ -196,6 +202,7 @@ internal constructor(
       if (isSocksEnabled) {
         scope.launch(context = Dispatchers.Default) {
           beginProxyLoop(
+              connectivityManager = connectivityManager,
               type = SharedProxy.Type.SOCKS,
               lock = lock,
               info = info,
@@ -252,6 +259,7 @@ internal constructor(
 
   private suspend fun startServer(
       lock: Locker.Lock,
+      connectivityManager: ConnectivityManager,
       info: BroadcastNetworkStatus.ConnectionInfo.Connected,
       socketCreator: SocketCreator,
       serverDispatcher: ServerDispatcher,
@@ -275,6 +283,7 @@ internal constructor(
         launch(context = Dispatchers.Default) {
           proxyLoop(
               scope = this,
+              connectivityManager = connectivityManager,
               lock = lock,
               info = info,
               socketCreator = socketCreator,
@@ -294,6 +303,7 @@ internal constructor(
 
   override suspend fun start(
       lock: Locker.Lock,
+      connectivityManager: ConnectivityManager,
       connectionStatus: Flow<BroadcastNetworkStatus.ConnectionInfo>,
   ) =
       withContext(context = Dispatchers.IO) {
@@ -347,6 +357,7 @@ internal constructor(
                     proxyJob =
                         launch(context = Dispatchers.Default) {
                           startServer(
+                              connectivityManager = connectivityManager,
                               lock = lock,
                               info = info,
                               socketCreator = socketCreator,

@@ -16,6 +16,7 @@
 
 package com.pyamsoft.tetherfi.server.proxy.manager
 
+import android.net.ConnectivityManager
 import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.server.SocketCreator
 import com.pyamsoft.tetherfi.server.broadcast.BroadcastNetworkStatus
@@ -38,6 +39,7 @@ internal interface ProxyManager {
     @CheckResult
     suspend fun create(
         type: SharedProxy.Type,
+        connectivityManager: ConnectivityManager,
         info: BroadcastNetworkStatus.ConnectionInfo.Connected,
         socketCreator: SocketCreator,
         serverDispatcher: ServerDispatcher,

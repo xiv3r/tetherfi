@@ -38,9 +38,9 @@ import io.netty.handler.codec.socksx.v5.Socks5CommandStatus
 import io.netty.handler.timeout.IdleState
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
+import io.netty.resolver.InetNameResolver
 import java.net.Inet4Address
 import java.net.Inet6Address
-import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
@@ -50,9 +50,8 @@ internal constructor(
     isDebug: Boolean,
     socketTagger: SocketTagger,
     androidPreferredNetwork: Network?,
-    private val isForcedIPv4Upstream: Boolean,
+    private val ip4Resolver: InetNameResolver?,
     private val tcpControlChannel: Channel,
-    private val isValidClient: (InetAddress) -> Boolean,
     private val serverSocketTimeout: ServerSocketTimeout,
 ) :
     ProxyHandler(
@@ -64,14 +63,14 @@ internal constructor(
   private var id: String = "UDP-RELAY-UNKNOWN"
 
   private fun resolveDestination(
-      ctx: ChannelHandlerContext,
       addressType: Socks5AddressType,
       originalDestinationAddress: String,
       port: Int,
       onResolved: (InetSocketAddress?) -> Unit,
   ) {
     // We don't need to force resolve an IPv4, just continue
-    if (!isForcedIPv4Upstream || addressType == Socks5AddressType.IPv4) {
+    val forceIP4Resolver = ip4Resolver
+    if (forceIP4Resolver == null || addressType == Socks5AddressType.IPv4) {
       val destination = InetSocketAddress(originalDestinationAddress, port)
       onResolved(destination)
       return
@@ -85,29 +84,26 @@ internal constructor(
     //
     // We can't use the Netty built in DnsResolver? It never resolves for some reason...
     Timber.d { "Forcing UDP over IPv4 connection $addressType $originalDestinationAddress" }
-    ctx.executor().execute {
-      try {
-        val ip4Address =
-            InetAddress.getAllByName(originalDestinationAddress)
-                // Only IPv4 addresses
-                .filterIsInstance<Inet4Address>()
-                // Pick a random one
-                .randomOrNull()
-                ?.hostAddress
 
-        if (ip4Address != null) {
-          val destination = InetSocketAddress(ip4Address, port)
-          Timber.d { "RESOLVED IPv4 $destination" }
-          onResolved(destination)
-        } else {
-          Timber.w { "No IPv4 address could be found for dest=$originalDestinationAddress" }
-          Timber.w { "Currently SOCKS5 UDP-ASSOCIATE proxy only works over IPv4" }
-          onResolved(null)
+    forceIP4Resolver.resolve(originalDestinationAddress).addListener { future ->
+      if (!future.isSuccess) {
+        Timber.e(future.cause()) {
+          "Unable to resolve IPv4 address for dest=$originalDestinationAddress"
         }
-      } catch (e: Throwable) {
-        Timber.e(e) { "Unable to resolve IPv4 address for dest=$originalDestinationAddress" }
         Timber.w { "Currently SOCKS5 UDP-ASSOCIATE proxy only works over IPv4" }
         onResolved(null)
+        return@addListener
+      }
+
+      val forcedIPv4Address = future.now.cast<Inet4Address>()
+      if (forcedIPv4Address == null) {
+        Timber.w { "No IPv4 address could be found for dest=$originalDestinationAddress" }
+        Timber.w { "Currently SOCKS5 UDP-ASSOCIATE proxy only works over IPv4" }
+        onResolved(null)
+      } else {
+        val destination = InetSocketAddress(forcedIPv4Address, port)
+        Timber.d { "RESOLVED IPv4 $destination" }
+        onResolved(destination)
       }
     }
   }
@@ -163,7 +159,6 @@ internal constructor(
     //              If we receive a non-ipv4 address, we must DNS lookup the IPv4 equivalent
     //              and map the address over.
     resolveDestination(
-        ctx = ctx,
         addressType = addrType,
         originalDestinationAddress = destinationAddr,
         port = destinationPort,
@@ -310,11 +305,24 @@ internal constructor(
       val sender = msg.sender()
       if (sender == null) {
         Timber.w { "Null sender in packet, drop" }
+        sendErrorAndClose(ctx, msg)
+        return
+      }
+
+      val clientAddress = tcpControlChannel.remoteAddress().cast<InetSocketAddress>()
+      if (clientAddress == null) {
+        Timber.w { "SOCKS TCP control channel remote==null" }
+        sendErrorAndClose(ctx, msg)
         return
       }
 
       // The sender of this packet is a REMOTE that we interacted with
-      if (!isValidClient(sender.address)) {
+      val isValid = clientAddress.address == sender.address
+      if (!isValid) {
+        Timber.w {
+          "Sender address did not match expected client sender=${sender.address} client=${clientAddress.address}"
+        }
+        sendErrorAndClose(ctx, msg)
         return
       }
 

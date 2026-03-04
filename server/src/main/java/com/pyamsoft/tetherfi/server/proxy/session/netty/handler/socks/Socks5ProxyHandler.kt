@@ -40,10 +40,12 @@ import io.netty.handler.codec.socksx.v5.Socks5CommandType
 import io.netty.handler.codec.socksx.v5.Socks5InitialRequest
 import io.netty.handler.codec.socksx.v5.Socks5InitialRequestDecoder
 import io.netty.handler.codec.socksx.v5.Socks5Message
+import io.netty.resolver.InetNameResolver
 import java.net.InetSocketAddress
 
 internal class Socks5ProxyHandler
 internal constructor(
+    private val ip4Resolver: InetNameResolver?,
     private val serverHostName: String,
     socketTagger: SocketTagger,
     androidPreferredNetwork: Network?,
@@ -102,21 +104,12 @@ internal constructor(
           ch.pipeline()
               .addLast(
                   UdpRelayHandler(
+                      ip4Resolver = ip4Resolver,
                       isDebug = isDebug,
                       socketTagger = socketTagger,
                       androidPreferredNetwork = androidPreferredNetwork,
                       serverSocketTimeout = serverSocketTimeout,
-                      isForcedIPv4Upstream = true,
                       tcpControlChannel = channel,
-                      isValidClient = { sender ->
-                        val isValid = clientAddress.address == sender
-                        if (!isValid) {
-                          Timber.w {
-                            "Sender address did not match expected client sender=${sender} client=${clientAddress.address}"
-                          }
-                        }
-                        return@UdpRelayHandler isValid
-                      },
                   )
               )
         }

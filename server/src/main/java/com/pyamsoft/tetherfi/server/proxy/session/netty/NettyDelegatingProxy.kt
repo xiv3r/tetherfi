@@ -16,6 +16,7 @@
 
 package com.pyamsoft.tetherfi.server.proxy.session.netty
 
+import android.net.ConnectivityManager
 import android.net.Network
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
@@ -36,6 +37,12 @@ import io.netty.handler.codec.socksx.v5.Socks5InitialRequestDecoder
 import io.netty.handler.codec.socksx.v5.Socks5ServerEncoder
 import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
+import io.netty.resolver.InetNameResolver
+import io.netty.resolver.ResolvedAddressTypes
+import io.netty.resolver.dns.DefaultDnsCache
+import io.netty.resolver.dns.DnsNameResolverBuilder
+import io.netty.resolver.dns.SequentialDnsServerAddressStreamProvider
+import java.net.InetSocketAddress
 
 class NettyDelegatingProxy
 internal constructor(
@@ -43,6 +50,7 @@ internal constructor(
     private val port: Int,
     private val isDebug: Boolean,
     private val socketTagger: SocketTagger,
+    private val androidConnectivityManager: ConnectivityManager,
     private val androidPreferredNetwork: Network?,
     private val isHttpEnabled: Boolean,
     private val isSocksEnabled: Boolean,
@@ -63,15 +71,63 @@ internal constructor(
     ) {
 
   override fun onChannelInitialized(channel: SocketChannel) {
+    Timber.d { "Netty proxy server initialized!" }
+
     val pipeline = channel.pipeline()
 
     if (isDebug) {
       pipeline.addLast(LoggingHandler(LogLevel.DEBUG))
     }
 
+    // TODO(Peter): Pull the system DNS servers from the activeNetwork (via
+    // ConnectivityManager.getActiveNetwork and getLinkProperties)
+    //              OR the androidPreferredNetwork if defined.
+    //              If nothing, fallback to hardcoded Cloudflare and Google DNS
+    //              Need to get IPv6 fallbacks
+    val roundRobinDnsServers =
+        SequentialDnsServerAddressStreamProvider(
+            InetSocketAddress("8.8.8.8", 53),
+            InetSocketAddress("8.8.4.4", 53),
+            InetSocketAddress("1.1.1.1", 53),
+            InetSocketAddress("1.0.0.1", 53),
+        )
+
+    // TODO(Peter): Currently our proxy ONLY works over IPv4
+    // We resolve the hostname on our Android device here via DNS
+    // and then we proxy the connection from our requesting client
+    //
+    // If we are unable to find an IPv4 address to use, we must fail
+    val ip4Resolver =
+        DnsNameResolverBuilder(channel.eventLoop())
+            .datagramChannelFactory(
+                NetworkBoundDatagramChannelFactory(
+                    socketTagger = socketTagger,
+                    androidPreferredNetwork = androidPreferredNetwork,
+                )
+            )
+            .socketChannelFactory(
+                NetworkBoundSocketChannelFactory(
+                    socketTagger = socketTagger,
+                    androidPreferredNetwork = androidPreferredNetwork,
+                )
+            )
+            .nameServerProvider(roundRobinDnsServers)
+            .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+            .resolveCache(NO_CLEAR_DNS_CACHE)
+            .build()
+
+    doOnDestroy {
+      Timber.d { "Shutdown netty IPv4 forced resolver" }
+      ip4Resolver.close()
+
+      NO_CLEAR_DNS_CACHE.clear()
+    }
+
     // And bind our proxy relay handler
     pipeline.addLast(
         DelegatingHandler(
+            // To prevent forcing IPv4 resolution, pass this as NULL
+            ip4Resolver = ip4Resolver,
             serverHostName = host,
             serverPort = port,
             isDebug = isDebug,
@@ -83,9 +139,29 @@ internal constructor(
         )
     )
   }
+
+  companion object {
+    private val NO_CLEAR_DNS_CACHE =
+        object : DefaultDnsCache() {
+
+          fun reallyClear() {
+            super.clear()
+          }
+
+          override fun clear() {
+            // Do not allow normal clearing
+          }
+
+          override fun clear(hostname: String?): Boolean {
+            // Do not allow normal clearing
+            return false
+          }
+        }
+  }
 }
 
 private class DelegatingHandler(
+    private val ip4Resolver: InetNameResolver?,
     private val serverHostName: String,
     private val serverPort: Int,
     private val isDebug: Boolean,
@@ -149,6 +225,7 @@ private class DelegatingHandler(
 
           pipeline.addLast(
               Socks5ProxyHandler(
+                  ip4Resolver = ip4Resolver,
                   serverHostName = serverHostName,
                   isDebug = isDebug,
                   socketTagger = socketTagger,
@@ -157,6 +234,7 @@ private class DelegatingHandler(
               )
           )
         }
+
         else -> {
           if (!isHttpEnabled) {
             Timber.w { "DROP: HTTP traffic received but HTTP was not enabled" }

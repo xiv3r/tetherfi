@@ -16,6 +16,7 @@
 
 package com.pyamsoft.tetherfi.server.proxy.manager.factory
 
+import android.net.ConnectivityManager
 import androidx.annotation.CheckResult
 import com.pyamsoft.pydroid.bus.EventConsumer
 import com.pyamsoft.pydroid.core.ThreadEnforcer
@@ -91,6 +92,7 @@ internal constructor(
 
   @CheckResult
   private suspend fun createNetty(
+      connectivityManager: ConnectivityManager,
       info: BroadcastNetworkStatus.ConnectionInfo.Connected,
   ): ProxyManager {
     enforcer.assertOffMainThread()
@@ -107,6 +109,7 @@ internal constructor(
         isDebug = isDebug,
         socketBinder = socketBinder,
         socketTagger = socketTagger,
+        connectivityManager = connectivityManager,
         isHttpEnabled = isHttpEnabled,
         isSocksEnabled = isSocksEnabled,
         serverSocketTimeout = socketTimeout,
@@ -157,6 +160,7 @@ internal constructor(
 
   override suspend fun create(
       type: SharedProxy.Type,
+      connectivityManager: ConnectivityManager,
       info: BroadcastNetworkStatus.ConnectionInfo.Connected,
       socketCreator: SocketCreator,
       serverDispatcher: ServerDispatcher,
@@ -165,6 +169,7 @@ internal constructor(
         return@withContext when (type) {
           SharedProxy.Type.NETTY ->
               createNetty(
+                  connectivityManager = connectivityManager,
                   info = info,
               )
 

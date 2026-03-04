@@ -16,6 +16,7 @@
 
 package com.pyamsoft.tetherfi.server.proxy.manager.netty
 
+import android.net.ConnectivityManager
 import android.net.Network
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.broadcast.BroadcastNetworkStatus
@@ -29,6 +30,7 @@ import kotlinx.coroutines.launch
 internal class NettyDelegatingProxyManager
 internal constructor(
     socketBinder: SocketBinder,
+    private val connectivityManager: ConnectivityManager,
     private val isDebug: Boolean,
     private val socketTagger: SocketTagger,
     private val hostConnection: BroadcastNetworkStatus.ConnectionInfo.Connected,
@@ -58,6 +60,7 @@ internal constructor(
         isHttpEnabled = isHttpEnabled,
         isSocksEnabled = isSocksEnabled,
         serverSocketTimeout = serverSocketTimeout,
+        androidConnectivityManager = connectivityManager,
         androidPreferredNetwork = network,
         onOpened = { launch { onOpened() } },
         onClosing = { launch { onClosing() } },

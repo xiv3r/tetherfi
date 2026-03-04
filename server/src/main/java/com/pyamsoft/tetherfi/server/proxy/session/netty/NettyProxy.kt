@@ -20,6 +20,7 @@ import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import io.netty.bootstrap.ServerBootstrap
+import io.netty.channel.ChannelInitializer
 import io.netty.channel.ChannelOption
 import io.netty.channel.MultiThreadIoEventLoopGroup
 import io.netty.channel.nio.NioIoHandler
@@ -41,8 +42,14 @@ protected constructor(
     private val onError: (Throwable) -> Unit,
 ) {
 
+  private val deathCallbacks = mutableSetOf<() -> Unit>()
+
   private fun proxyDead() {
     Timber.d { "Netty is completely shutdown!" }
+
+    deathCallbacks.forEach { it() }
+    deathCallbacks.clear()
+
     onClosed()
   }
 
@@ -61,6 +68,10 @@ protected constructor(
     }
   }
 
+  protected fun doOnDestroy(block: () -> Unit) {
+    deathCallbacks.add(block)
+  }
+
   @CheckResult
   fun start(): NettyServerStopper {
     // The boss group usually does not need more than a single thread allocated to it
@@ -75,7 +86,7 @@ protected constructor(
             .childOption(ChannelOption.AUTO_CLOSE, true)
             .childOption(ChannelOption.TCP_NODELAY, true)
             .childHandler(
-                object : io.netty.channel.ChannelInitializer<SocketChannel>() {
+                object : ChannelInitializer<SocketChannel>() {
                   override fun initChannel(ch: SocketChannel) {
                     onChannelInitialized(ch)
                   }
@@ -125,5 +136,5 @@ protected constructor(
     }
   }
 
-  protected abstract fun onChannelInitialized(channel: SocketChannel)
+  protected open fun onChannelInitialized(channel: SocketChannel) {}
 }

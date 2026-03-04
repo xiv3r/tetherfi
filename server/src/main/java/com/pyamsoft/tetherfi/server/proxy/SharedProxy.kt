@@ -16,6 +16,7 @@
 
 package com.pyamsoft.tetherfi.server.proxy
 
+import android.net.ConnectivityManager
 import com.pyamsoft.tetherfi.server.Server
 import com.pyamsoft.tetherfi.server.broadcast.BroadcastNetworkStatus
 import com.pyamsoft.tetherfi.server.lock.Locker
@@ -25,6 +26,7 @@ interface SharedProxy : Server {
 
   suspend fun start(
       lock: Locker.Lock,
+      connectivityManager: ConnectivityManager,
       connectionStatus: Flow<BroadcastNetworkStatus.ConnectionInfo>,
   )
 
