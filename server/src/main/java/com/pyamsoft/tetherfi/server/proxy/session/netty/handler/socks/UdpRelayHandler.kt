@@ -245,8 +245,9 @@ internal constructor(
     try {
       when (type) {
         Socks5AddressType.IPv4 -> {
-          val bytes = buf.readBytes(4)
-          val addr = Inet4Address.getByAddress(bytes.array())
+          val bytes = ByteArray(4)
+          buf.readBytes(bytes)
+          val addr = Inet4Address.getByAddress(bytes)
           if (addr == null) {
             Timber.w { "Unable to construct IPv4 from byte array $bytes" }
             return ""
@@ -262,8 +263,9 @@ internal constructor(
         }
 
         Socks5AddressType.IPv6 -> {
-          val bytes = buf.readBytes(16)
-          val addr = Inet6Address.getByAddress(bytes.array())
+          val bytes = ByteArray(16)
+          buf.readBytes(bytes)
+          val addr = Inet6Address.getByAddress(bytes)
           if (addr == null) {
             Timber.w { "Unable to construct IPv6 from byte array $bytes" }
             return ""
@@ -324,7 +326,6 @@ internal constructor(
   override fun channelActive(ctx: ChannelHandlerContext) {
     val addr = ctx.channel().localAddress()
     id = "UDP-RELAY-${addr.address}:${addr.port}"
-    Timber.d { "Active channel $id" }
 
     // Close UDP relay when control socket closes
     tcpControlChannel.closeFuture().addListener {

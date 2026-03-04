@@ -151,17 +151,12 @@ internal constructor(
       pipeline.dropHandler(this::class)
 
       // Tell proxy we've established connection so that NOW we can relay
-      Timber.d {
-        "Open UDP Relay: ${
-        resolveSocks5AddressType(
-          relayControlAddress
-        )
-      } $relayControl"
-      }
+      val type = resolveSocks5AddressType(relayControlAddress)
+      Timber.d { "Open UDP Relay: ${type} $relayControl" }
       ctx.writeAndFlush(
           DefaultSocks5CommandResponse(
               Socks5CommandStatus.SUCCESS,
-              resolveSocks5AddressType(relayControlAddress),
+              type,
               relayControl.address,
               relayControl.port,
           )
