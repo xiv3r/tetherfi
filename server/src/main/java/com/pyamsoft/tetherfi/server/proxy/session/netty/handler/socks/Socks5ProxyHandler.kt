@@ -44,6 +44,8 @@ import io.netty.handler.codec.socksx.v5.Socks5Message
 import io.netty.util.ReferenceCountUtil
 import java.net.InetSocketAddress
 import java.time.Clock
+import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
 
 internal class Socks5ProxyHandler
 internal constructor(
@@ -60,6 +62,8 @@ internal constructor(
         isDebug = isDebug,
         serverSocketTimeout = serverSocketTimeout,
     ) {
+
+  private val upstreamMap: MutableMap<InetSocketAddress, UdpUpstream> = ConcurrentHashMap()
 
   @CheckResult
   private fun createSOCKS5CommandErrorResponse(msg: Socks5CommandRequest): Socks5CommandResponse {
@@ -95,34 +99,47 @@ internal constructor(
       return
     }
 
-    val controlFuture =
-        newDatagramServer(
-            isDebug = isDebug,
-            channel = serverChannel,
-            hostName = serverHostName,
-            socketTagger = socketTagger,
-            androidPreferredNetwork = androidPreferredNetwork,
-        ) { ch ->
-          ch.pipeline()
-              .addLast(
-                  UdpRelayHandler(
-                      isDebug = isDebug,
-                      socketTagger = socketTagger,
-                      androidPreferredNetwork = androidPreferredNetwork,
-                      serverSocketTimeout = serverSocketTimeout,
-                      clock = clock,
-                      tcpControlChannel = serverChannel,
-                  )
-              )
+    val udpControl =
+        upstreamMap.getOrPut(clientAddress) {
+          val future =
+              newDatagramServer(
+                  isDebug = isDebug,
+                  channel = serverChannel,
+                  hostName = serverHostName,
+                  socketTagger = socketTagger,
+                  androidPreferredNetwork = androidPreferredNetwork,
+              ) { ch ->
+                ch.pipeline()
+                    .addLast(
+                        UdpRelayHandler(
+                            isDebug = isDebug,
+                            socketTagger = socketTagger,
+                            androidPreferredNetwork = androidPreferredNetwork,
+                            serverSocketTimeout = serverSocketTimeout,
+                            clock = clock,
+                            clientAddress = clientAddress,
+                        )
+                    )
+              }
+
+          return@getOrPut UdpUpstream(
+              upstreamFuture = future,
+              lastActivityTimeMillis = 0,
+          )
         }
 
-    val controlSocket = controlFuture.channel()
+    // Update the last active time
+    udpControl.lastActivityTimeMillis = Instant.now(clock).toEpochMilli()
+
+    val controlSocket = udpControl.upstreamFuture.channel()
 
     // When this socket closes, close the outbound
     serverChannel.closeFuture().addListener { controlSocket.flushAndClose() }
-    controlSocket.closeFuture().addListener { serverChannel.flushAndClose() }
+    // NOTE(Peter): DO NOT close the control socket in case we will use it for another attempt
+    //              But DO remove it from the map when it closes
+    controlSocket.closeFuture().addListener { upstreamMap.remove(clientAddress) }
 
-    controlFuture.addListener { future ->
+    udpControl.upstreamFuture.addListener { future ->
       if (!future.isSuccess) {
         Timber.e(future.cause()) { "SOCKS UDP-ASSOC proxied outbound failed" }
         sendFailureAndClose(ctx, msg)
@@ -248,6 +265,12 @@ internal constructor(
   override fun onChannelActive(ctx: ChannelHandlerContext) {
     val addr = ctx.channel().localAddress()
     setChannelId("SOCKS4-INBOUND-${addr.address}:${addr.port}")
+  }
+
+  override fun onCloseChannels(ctx: ChannelHandlerContext) {
+    // Clear the map so that we can close any UDP upstream connections
+    upstreamMap.forEach { (_, udp) -> udp.upstreamFuture.channel().flushAndClose() }
+    upstreamMap.clear()
   }
 
   override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {

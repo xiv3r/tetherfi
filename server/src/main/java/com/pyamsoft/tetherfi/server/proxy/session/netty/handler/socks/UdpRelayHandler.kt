@@ -18,7 +18,6 @@ package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks
 
 import android.net.Network
 import androidx.annotation.CheckResult
-import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
@@ -28,7 +27,6 @@ import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.newDatagramServe
 import io.ktor.util.network.address
 import io.ktor.util.network.port
 import io.netty.buffer.ByteBuf
-import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.socket.DatagramPacket
 import io.netty.handler.codec.socksx.v5.DefaultSocks5CommandResponse
@@ -44,8 +42,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 internal class UdpRelayHandler
 internal constructor(
-    tcpControlChannel: Channel,
     serverSocketTimeout: ServerSocketTimeout,
+    private val clientAddress: InetSocketAddress,
     private val clock: Clock,
     private val isDebug: Boolean,
     private val socketTagger: SocketTagger,
@@ -56,7 +54,6 @@ internal constructor(
     ) {
 
   private val upstreamMap: MutableMap<InetSocketAddress, UdpUpstream> = ConcurrentHashMap()
-  private val clientAddress by lazy { tcpControlChannel.remoteAddress().cast<InetSocketAddress>() }
 
   private fun unwrapUdpResponse(
       ctx: ChannelHandlerContext,
@@ -156,7 +153,9 @@ internal constructor(
 
     // When this socket closes, close the outbound
     serverChannel.closeFuture().addListener { outbound.flushAndClose() }
-    // NOTE(Peter): DO NOT close the relay socket in case we will use it for another attempt
+    // NOTE(Peter): DO NOT close the control socket in case we will use it for another attempt
+    //              But DO remove it from the map when it closes
+    outbound.closeFuture().addListener { upstreamMap.remove(clientAddress) }
 
     udpFuture.addListener { future ->
       if (!future.isSuccess) {
@@ -276,12 +275,6 @@ internal constructor(
       }
 
       val client = clientAddress
-      if (client == null) {
-        Timber.w { "(${channelId}) DROP: SOCKS TCP control channel remote==null" }
-        sendErrorAndClose(ctx, msg)
-        return
-      }
-
       // The sender of this packet is a REMOTE that we interacted with
       val isValid = client.address == sender.address
       if (!isValid) {
