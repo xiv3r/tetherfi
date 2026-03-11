@@ -21,12 +21,9 @@ import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.ProtocolDelegatingHandler
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.SharedUdpControlRelay
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.UdpInfo
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.UdpRelayHandler
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.UdpRelayUpstreamHandler
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.UdpChannelCreator
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.UdpControlSocketCreator
 import io.netty.channel.Channel
-import io.netty.channel.ChannelFuture
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.handler.logging.LogLevel
@@ -60,50 +57,26 @@ internal constructor(
     onError = onError,
   ) {
 
-  private var udpUpstreamRelay: SharedUdpControlRelay<UdpInfo>? = null
-  private var udpControlRelay: SharedUdpControlRelay<Channel>? = null
+  private var udpControlSocketCreator: UdpControlSocketCreator? = null
 
   override fun onServerStarted(
     scope: CoroutineScope,
     channel: Channel,
     workerGroup: EventLoopGroup
   ) {
-    udpControlRelay?.close()
-
-    val upstream = SharedUdpControlRelay(
-      socketTagger = socketTagger,
-      androidPreferredNetwork = androidPreferredNetwork,
-      handler = { relay, _ ->
-        UdpRelayUpstreamHandler(
-          getClient = { relay.getClient(it) },
-        )
-      }
-    ).also {
-      udpUpstreamRelay = it
+    if (isSocksEnabled) {
+      udpControlSocketCreator = UdpControlSocketCreator(
+        creator = UdpChannelCreator(
+          eventLoop = workerGroup,
+          socketTagger = socketTagger,
+          androidPreferredNetwork = androidPreferredNetwork,
+        ),
+      )
     }
-
-    val relay = SharedUdpControlRelay<Channel>(
-      socketTagger = socketTagger,
-      androidPreferredNetwork = androidPreferredNetwork,
-      handler = { _, _ ->
-        UdpRelayHandler(
-          upstreamSharedRelay = upstream,
-        )
-      }
-    ).also {
-      udpControlRelay = it
-    }
-
-    upstream.start(workerGroup)
-    relay.start(serverHostName = host, eventLoop = workerGroup)
   }
 
   override fun onServerStopped() {
-    udpControlRelay?.close()
-    udpControlRelay = null
-
-    udpUpstreamRelay?.close()
-    udpUpstreamRelay = null
+    udpControlSocketCreator = null
   }
 
   override fun onChannelInitialized(channel: SocketChannel) {
@@ -115,21 +88,14 @@ internal constructor(
       pipeline.addLast(LoggingHandler(LogLevel.DEBUG))
     }
 
-    val relay = udpControlRelay
-    if (relay == null) {
-      Timber.w { "UDP control relay is null, cannot initialize" }
-      return
-    }
-
     // And bind our proxy relay handler
     pipeline.addLast(
       ProtocolDelegatingHandler(
-        udpControlRelay = relay,
+        udpControlSocketCreator = udpControlSocketCreator,
         isDebug = isDebug,
         socketTagger = socketTagger,
         androidPreferredNetwork = androidPreferredNetwork,
         isHttpEnabled = isHttpEnabled,
-        isSocksEnabled = isSocksEnabled,
         serverSocketTimeout = serverSocketTimeout,
       )
     )

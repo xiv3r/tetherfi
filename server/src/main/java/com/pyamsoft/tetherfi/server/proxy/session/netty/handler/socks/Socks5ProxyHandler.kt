@@ -50,7 +50,7 @@ internal constructor(
   isDebug: Boolean,
   socketTagger: SocketTagger,
   androidPreferredNetwork: Network?,
-  private val udpControlRelay: SharedUdpControlRelay<Channel>,
+  private val udpControl: UdpControlSocketCreator,
 ) :
   SocksProxyHandler<Socks5CommandRequest>(
     socketTagger = socketTagger,
@@ -58,8 +58,6 @@ internal constructor(
     isDebug = isDebug,
     serverSocketTimeout = serverSocketTimeout,
   ) {
-
-  private val upstreamMap: MutableMap<InetSocketAddress, UdpUpstream> = ConcurrentHashMap()
 
   @CheckResult
   private fun createSOCKS5CommandErrorResponse(msg: Socks5CommandRequest): Socks5CommandResponse {
@@ -95,23 +93,18 @@ internal constructor(
       return
     }
 
-    val udpControl = udpControlRelay.udpChannel
-    if (udpControl == null) {
-      Timber.w { "SOCKS UDP Control is NULL" }
-      sendFailureAndClose(ctx, msg)
-      return
-    }
+    val udpControl = udpControl.register(clientAddress)
 
     // When the shared UDP control socket closes, close this socket
-    val controlSocket = udpControl.channel()
-    controlSocket.closeFuture().addListener { serverChannel.flushAndClose() }
+    val udpFuture = udpControl.channelFuture
+    val controlSocket = udpFuture.channel()
 
     // Register the client
     // When this channel closes, remove it from the registered list
-    val unregister = udpControlRelay.register(clientAddress, serverChannel)
-    serverChannel.closeFuture().addListener { unregister() }
+    serverChannel.closeFuture().addListener { udpControl.unregister() }
 
-    udpControl.addListener { future ->
+    Timber.d { "Connect to UDP control: ${controlSocket.localAddress()}" }
+    udpFuture.addListener { future ->
       if (!future.isSuccess) {
         Timber.e(future.cause()) { "SOCKS UDP-ASSOC proxied outbound failed" }
         sendFailureAndClose(ctx, msg)
@@ -238,12 +231,6 @@ internal constructor(
   override fun onChannelActive(ctx: ChannelHandlerContext) {
     val addr = ctx.channel().localAddress()
     setChannelId("SOCKS4-INBOUND-${addr.address}:${addr.port}")
-  }
-
-  override fun onCloseChannels(ctx: ChannelHandlerContext) {
-    // Clear the map so that we can close any UDP upstream connections
-    upstreamMap.forEach { (_, udp) -> udp.upstreamFuture.channel().flushAndClose() }
-    upstreamMap.clear()
   }
 
   override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {

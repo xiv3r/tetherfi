@@ -21,12 +21,10 @@ import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.http.Http1ProxyHandler
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.SharedUdpControlRelay
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.Socks4ProxyHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.Socks5ProxyHandler
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.UdpControlSocketCreator
 import io.netty.buffer.ByteBuf
-import io.netty.channel.Channel
-import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.ByteToMessageDecoder
 import io.netty.handler.codec.http.HttpServerCodec
@@ -36,16 +34,15 @@ import io.netty.handler.codec.socksx.v4.Socks4ServerEncoder
 import io.netty.handler.codec.socksx.v5.Socks5CommandRequestDecoder
 import io.netty.handler.codec.socksx.v5.Socks5InitialRequestDecoder
 import io.netty.handler.codec.socksx.v5.Socks5ServerEncoder
-import java.time.Clock
 
 internal class ProtocolDelegatingHandler
 internal constructor(
-  private val udpControlRelay: SharedUdpControlRelay<Channel>,
+  // IF this is NULL, SOCKS is not enabled
+  private val udpControlSocketCreator: UdpControlSocketCreator?,
   private val isDebug: Boolean,
   private val socketTagger: SocketTagger,
   private val androidPreferredNetwork: Network?,
   private val isHttpEnabled: Boolean,
-  private val isSocksEnabled: Boolean,
   private val serverSocketTimeout: ServerSocketTimeout,
 ) : ByteToMessageDecoder() {
 
@@ -70,7 +67,7 @@ internal constructor(
     try {
       when (socksVersion) {
         SocksVersion.SOCKS4a -> {
-          if (!isSocksEnabled) {
+          if (udpControlSocketCreator == null) {
             Timber.w { "DROP: SOCKS4a traffic received but SOCKS was not enabled" }
             return
           }
@@ -90,7 +87,8 @@ internal constructor(
         }
 
         SocksVersion.SOCKS5 -> {
-          if (!isSocksEnabled) {
+          val udpControl = udpControlSocketCreator
+          if (udpControl == null) {
             Timber.w { "DROP: SOCKS5 traffic received but SOCKS was not enabled" }
             return
           }
@@ -102,7 +100,7 @@ internal constructor(
 
           pipeline.addLast(
               Socks5ProxyHandler(
-                  udpControlRelay = udpControlRelay,
+                  udpControl = udpControl,
                   isDebug = isDebug,
                   socketTagger = socketTagger,
                   androidPreferredNetwork = androidPreferredNetwork,

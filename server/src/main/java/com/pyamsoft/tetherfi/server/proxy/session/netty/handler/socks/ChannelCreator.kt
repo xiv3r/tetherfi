@@ -16,20 +16,21 @@
 
 package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks
 
+import androidx.annotation.CheckResult
 import io.netty.channel.Channel
 import io.netty.channel.ChannelFuture
-import java.net.InetSocketAddress
 
-@ConsistentCopyVisibility
-internal data class UdpUpstream
-internal constructor(
-  val upstreamFuture: ChannelFuture,
-  var lastActivityTimeMillis: Long,
-)
+internal interface ChannelCreator {
 
-@ConsistentCopyVisibility
-internal data class UdpInfo
-internal constructor(
-  val channel: Channel,
-  val clientAddress: InetSocketAddress,
-)
+  @CheckResult
+  fun bind(
+    onChannelInitialized: (Channel) -> Unit,
+  ): ChannelFuture
+
+  @CheckResult
+  fun bind(
+    hostName: String,
+    onChannelInitialized: (Channel) -> Unit,
+  ): ChannelFuture
+
+}
