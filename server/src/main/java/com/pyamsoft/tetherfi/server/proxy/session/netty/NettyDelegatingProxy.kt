@@ -25,8 +25,6 @@ import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.ProtocolDelegati
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.TcpChannelCreator
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.UdpChannelCreator
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.pool.UdpSocketPooler
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.udp.UdpControlSocketCreator
 import io.netty.channel.Channel
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.socket.SocketChannel
@@ -62,7 +60,7 @@ internal constructor(
         onError = onError,
     ) {
 
-  private var udpControlSocketCreator: UdpSocketPooler? = null
+  private var udpSocketCreator: ChannelCreator? = null
   private var tcpSocketCreator: ChannelCreator? = null
 
   override fun onServerStarted(
@@ -73,15 +71,11 @@ internal constructor(
     Timber.d { "Netty proxy server initialized!" }
 
     if (isSocksEnabled) {
-      udpControlSocketCreator =
-          UdpControlSocketCreator(
-              serverSocketTimeout = serverSocketTimeout,
-              creator =
-                  UdpChannelCreator(
-                      eventLoop = workerGroup,
-                      socketTagger = socketTagger,
-                      androidPreferredNetwork = androidPreferredNetwork,
-                  ),
+      udpSocketCreator =
+          UdpChannelCreator(
+              eventLoop = workerGroup,
+              socketTagger = socketTagger,
+              androidPreferredNetwork = androidPreferredNetwork,
           )
     }
 
@@ -94,9 +88,7 @@ internal constructor(
   }
 
   override fun onServerStopped() {
-    udpControlSocketCreator?.close()
-    udpControlSocketCreator = null
-
+    udpSocketCreator = null
     tcpSocketCreator = null
   }
 
@@ -110,14 +102,15 @@ internal constructor(
     // And bind our proxy relay handler
     pipeline.addLast(
         ProtocolDelegatingHandler(
+            isHttpEnabled = isHttpEnabled,
+            serverSocketTimeout = serverSocketTimeout,
+
             // This will be resolved in time I am pretty sure :)
             tcpSocketCreator = tcpSocketCreator.requireNotNull(),
 
             // If this is NULL, then SOCKS is disabled.
             // If non-null SOCKS is enabled
-            udpControlSocketCreator = udpControlSocketCreator,
-            isHttpEnabled = isHttpEnabled,
-            serverSocketTimeout = serverSocketTimeout,
+            udpSocketCreator = udpSocketCreator,
         )
     )
   }

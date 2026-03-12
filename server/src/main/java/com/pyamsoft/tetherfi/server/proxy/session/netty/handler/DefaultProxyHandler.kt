@@ -16,9 +16,7 @@
 
 package com.pyamsoft.tetherfi.server.proxy.session.netty.handler
 
-import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
-import io.netty.channel.ChannelHandlerContext
 
 internal abstract class DefaultProxyHandler
 internal constructor(
@@ -26,16 +24,4 @@ internal constructor(
 ) :
     ProxyHandler(
         serverSocketTimeout = serverSocketTimeout,
-    ) {
-
-  final override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
-    try {
-      ctx.handleIdleState(evt) {
-        Timber.d { "(${channelId}): Close channel after idle timeout" }
-        closeChannels(ctx)
-      }
-    } finally {
-      super.userEventTriggered(ctx, evt)
-    }
-  }
-}
+    ) {}

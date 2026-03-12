@@ -16,11 +16,12 @@
 
 package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.udp
 
+import androidx.annotation.CheckResult
 import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.ProxyHandler
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.handleIdleState
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.flushAndClose
 import io.ktor.util.network.address
 import io.ktor.util.network.port
 import io.netty.channel.ChannelHandlerContext
@@ -28,18 +29,39 @@ import io.netty.channel.socket.DatagramPacket
 import io.netty.handler.codec.socksx.v5.DefaultSocks5CommandResponse
 import io.netty.handler.codec.socksx.v5.Socks5AddressType
 import io.netty.handler.codec.socksx.v5.Socks5CommandStatus
+import io.netty.util.AttributeKey
 import java.net.InetSocketAddress
 
 internal class UdpRelayHandler
 internal constructor(
     serverSocketTimeout: ServerSocketTimeout,
-    private val getTcpControl: SocketAddressHolder,
-    private val backToClient: MutableSocketAddressHolder,
-    private val unregister: () -> Unit,
 ) :
     ProxyHandler(
         serverSocketTimeout = serverSocketTimeout,
     ) {
+
+  @CheckResult
+  private fun getClientAddress(ctx: ChannelHandlerContext): InetSocketAddress? {
+    return ctx.channel().attr(CLIENT_ADDRESS).get()
+  }
+
+  private fun setClientAddress(ctx: ChannelHandlerContext, address: InetSocketAddress) {
+    return ctx.channel().attr(CLIENT_ADDRESS).set(address)
+  }
+
+  @CheckResult
+  private fun getChannelTag(ctx: ChannelHandlerContext): String? {
+    return ctx.channel().attr(TAG).get()
+  }
+
+  private fun setChannelTag(ctx: ChannelHandlerContext, tag: String) {
+    ctx.channel().attr(TAG).set(tag)
+  }
+
+  @CheckResult
+  private fun getTcpControlAddress(ctx: ChannelHandlerContext): InetSocketAddress? {
+    return ctx.channel().attr(TCP_CONTROL_ADDRESS).get()
+  }
 
   private fun unwrapUdpResponse(
       ctx: ChannelHandlerContext,
@@ -51,6 +73,8 @@ internal constructor(
         msg = msg,
         onError = { sendErrorAndClose(ctx, msg) },
         onUnwrapped = { data, destination ->
+          setChannelTag(ctx, "UDP-RELAY-${destination.address}:${destination.port}")
+
           val packet = DatagramPacket(data, destination)
           ctx.writeAndFlush(packet).addListener { packet.release() }
         },
@@ -58,15 +82,22 @@ internal constructor(
   }
 
   override fun onChannelActive(ctx: ChannelHandlerContext) {
-    val addr = ctx.channel().localAddress()
-    setChannelId("UDP-RELAY-${addr.address}:${addr.port}")
+    val id = getChannelTag(ctx)
+    if (id == null) {
+      val local = ctx.channel().localAddress()
+      setChannelId("UDP-RELAY-${local.address}:${local.port}")
+    } else {
+      setChannelId(id)
+    }
   }
 
-  override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
-    try {
-      ctx.handleIdleState(evt) { unregister() }
-    } finally {
-      super.userEventTriggered(ctx, evt)
+  override fun onCloseChannels(ctx: ChannelHandlerContext) {
+    ctx.flushAndClose()
+
+    ctx.channel().apply {
+      attr(TAG).set(null)
+      attr(TCP_CONTROL_ADDRESS).set(null)
+      attr(CLIENT_ADDRESS).set(null)
     }
   }
 
@@ -100,18 +131,18 @@ internal constructor(
         return
       }
 
-      val tcpControlClient = getTcpControl.get()
+      val tcpControlClient = getTcpControlAddress(ctx)
       if (tcpControlClient == null) {
         Timber.w { "(${channelId}) DROP: No TCP control client for destination: $sender" }
         sendErrorAndClose(ctx, msg)
         return
       }
 
-      val client = backToClient.get()
+      val client = getClientAddress(ctx)
       if (client == null || sender == client) {
         // We had no client so this traffic is our client sending -> destination
         // Or this is continuing traffic from the same sender
-        backToClient.set(sender)
+        setClientAddress(ctx, sender)
 
         // Validate that the IP ADDRESS of the client and sender are the same
         if (tcpControlClient.address != sender.address) {
@@ -134,5 +165,19 @@ internal constructor(
       Timber.w { "(${channelId}): Invalid message seen: $msg" }
       super.channelRead(ctx, msg)
     }
+  }
+
+  companion object {
+    @JvmStatic
+    private val TAG: AttributeKey<String> =
+        AttributeKey.newInstance("${UdpRelayHandler::class.simpleName}-ID")
+
+    @JvmStatic
+    private val CLIENT_ADDRESS: AttributeKey<InetSocketAddress> =
+        AttributeKey.newInstance("${UdpRelayHandler::class.simpleName}-CLIENT_ADDRESS")
+
+    @JvmStatic
+    val TCP_CONTROL_ADDRESS: AttributeKey<InetSocketAddress> =
+        AttributeKey.newInstance("${UdpRelayHandler::class.simpleName}-TCP_CONTROL_ADDRESS")
   }
 }

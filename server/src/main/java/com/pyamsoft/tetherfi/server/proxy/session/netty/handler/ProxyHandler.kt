@@ -51,6 +51,17 @@ internal constructor(
     }
   }
 
+  final override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
+    try {
+      ctx.handleIdleState(evt) {
+        Timber.d { "(${channelId}): Close channel after idle timeout" }
+        closeChannels(ctx)
+      }
+    } finally {
+      super.userEventTriggered(ctx, evt)
+    }
+  }
+
   final override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
     try {
       Timber.e(cause) { "($channelId): Exception caught! Close channel" }
@@ -65,6 +76,10 @@ internal constructor(
       Timber.d { "($channelId): Inactive! Close channel" }
       closeChannels(ctx)
     } finally {
+
+      // Reset channel ID after inactive
+      setChannelId("")
+
       super.channelInactive(ctx)
     }
   }

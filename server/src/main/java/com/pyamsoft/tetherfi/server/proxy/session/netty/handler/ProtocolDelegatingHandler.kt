@@ -20,7 +20,6 @@ import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.http.Http1ProxyHandler
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.pool.UdpSocketPooler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.Socks4ProxyHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.Socks5ProxyHandler
 import io.netty.buffer.ByteBuf
@@ -37,7 +36,7 @@ import io.netty.handler.codec.socksx.v5.Socks5ServerEncoder
 internal class ProtocolDelegatingHandler
 internal constructor(
     // IF this is NULL, SOCKS is not enabled
-    private val udpControlSocketCreator: UdpSocketPooler?,
+    private val udpSocketCreator: ChannelCreator?,
     private val tcpSocketCreator: ChannelCreator,
     private val isHttpEnabled: Boolean,
     private val serverSocketTimeout: ServerSocketTimeout,
@@ -64,7 +63,7 @@ internal constructor(
     try {
       when (socksVersion) {
         SocksVersion.SOCKS4a -> {
-          if (udpControlSocketCreator == null) {
+          if (udpSocketCreator == null) {
             Timber.w { "DROP: SOCKS4a traffic received but SOCKS was not enabled" }
             return
           }
@@ -82,7 +81,7 @@ internal constructor(
         }
 
         SocksVersion.SOCKS5 -> {
-          val udpControl = udpControlSocketCreator
+          val udpControl = udpSocketCreator
           if (udpControl == null) {
             Timber.w { "DROP: SOCKS5 traffic received but SOCKS was not enabled" }
             return
@@ -95,7 +94,7 @@ internal constructor(
 
           pipeline.addLast(
               Socks5ProxyHandler(
-                  udpSocketPooler = udpControl,
+                  udpSocketCreator = udpControl,
                   tcpSocketCreator = tcpSocketCreator,
                   serverSocketTimeout = serverSocketTimeout,
               )

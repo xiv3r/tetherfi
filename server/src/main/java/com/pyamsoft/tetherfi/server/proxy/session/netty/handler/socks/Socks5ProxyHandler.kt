@@ -23,7 +23,7 @@ import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.dropHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.flushAndClose
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.pool.UdpSocketPooler
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.udp.UdpRelayHandler
 import io.ktor.util.network.address
 import io.ktor.util.network.port
 import io.netty.channel.Channel
@@ -47,7 +47,7 @@ internal class Socks5ProxyHandler
 internal constructor(
     serverSocketTimeout: ServerSocketTimeout,
     tcpSocketCreator: ChannelCreator,
-    private val udpSocketPooler: UdpSocketPooler,
+    private val udpSocketCreator: ChannelCreator,
 ) :
     SocksProxyHandler<Socks5CommandRequest>(
         serverSocketTimeout = serverSocketTimeout,
@@ -89,24 +89,34 @@ internal constructor(
     }
 
     Timber.d { "Register UDP for TCP control $tcpControlAddress" }
-    val lease = udpSocketPooler.register(tcpControlAddress)
-    // When this channel closes, remove it from the registered list
-    serverChannel.closeFuture().addListener { lease.unregister() }
+    val udpControl =
+        udpSocketCreator.bind { ch ->
+          val pipeline = ch.pipeline()
 
-    val udpFuture = lease.socket
-    val udpSocket = udpFuture.channel()
+          // Read from the REMOTE and send back to the PROXY
+          pipeline.addLast(
+              UdpRelayHandler(
+                  serverSocketTimeout = serverSocketTimeout,
+              )
+          )
+        }
 
-    // When the shared UDP control socket closes, close this socket
-    udpSocket.closeFuture().addListener { serverChannel.flushAndClose() }
+    val udpRelay = udpControl.channel()
 
-    udpFuture.addListener { future ->
+    // When this socket closes, close the outbound
+    serverChannel.closeFuture().addListener { udpRelay.flushAndClose() }
+    udpRelay.closeFuture().addListener { serverChannel.flushAndClose() }
+
+    udpRelay.apply { attr(UdpRelayHandler.TCP_CONTROL_ADDRESS).set(tcpControlAddress) }
+
+    udpControl.addListener { future ->
       if (!future.isSuccess) {
         Timber.e(future.cause()) { "SOCKS UDP-ASSOC proxied outbound failed" }
         sendFailureAndClose(ctx, msg)
         return@addListener
       }
 
-      val relayControl = udpSocket.localAddress()
+      val relayControl = udpRelay.localAddress()
       if (relayControl == null) {
         Timber.w { "SOCKS UDP-ASSOC proxied outbound remote==null" }
         sendFailureAndClose(ctx, msg)

@@ -19,7 +19,7 @@ package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks
 import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.DefaultProxyHandler
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.ProxyHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.RelayHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.dropHandler
@@ -36,7 +36,7 @@ internal constructor(
     serverSocketTimeout: ServerSocketTimeout,
     private val tcpSocketCreator: ChannelCreator,
 ) :
-    DefaultProxyHandler(
+    ProxyHandler(
         serverSocketTimeout = serverSocketTimeout,
     ) {
 
@@ -70,8 +70,6 @@ internal constructor(
       dstAddr: String?,
       dstPort: Int,
   ) {
-    val channel = ctx.channel()
-
     if (dstAddr.isNullOrBlank()) {
       Timber.w { "(${channelId}) DROP: Invalid upstream destination address: $dstAddr" }
       sendErrorAndClose(ctx, msg)
@@ -96,8 +94,6 @@ internal constructor(
               // Read from the REMOTE and send back to the PROXY
               pipeline.addLast(
                   RelayHandler(
-                      id = "${msg.version()}-CONNECT-INBOUND-${dstAddr}:${dstPort}",
-                      writeToChannel = serverChannel,
                       serverSocketTimeout = serverSocketTimeout,
                   )
               )
@@ -110,11 +106,21 @@ internal constructor(
     serverChannel.closeFuture().addListener { outbound.flushAndClose() }
     outbound.closeFuture().addListener { serverChannel.flushAndClose() }
 
+    outbound.apply {
+      attr(RelayHandler.TAG).set("${msg.version()}-CONNECT-INBOUND-${dstAddr}:${dstPort}")
+      attr(RelayHandler.WRITE_BACK_CHANNEL).set(serverChannel)
+    }
+
     connectSocket.addListener { future ->
       if (!future.isSuccess) {
-        Timber.e(future.cause()) { "SOCKS CONNECT proxied outbound failed" }
+        Timber.e(future.cause()) { "${msg.version()} CONNECT proxied outbound failed" }
         sendFailureAndClose(ctx, msg)
         return@addListener
+      }
+
+      serverChannel.apply {
+        attr(RelayHandler.TAG).set("${msg.version()}-CONNECT-OUTBOUND-${dstAddr}:${dstPort}")
+        attr(RelayHandler.WRITE_BACK_CHANNEL).set(outbound)
       }
 
       // Tell proxy we've established connection
@@ -131,8 +137,6 @@ internal constructor(
       // Add a relay for the internet outbound
       pipeline.addLast(
           RelayHandler(
-              id = "${msg.version()}-CONNECT-OUTBOUND-${dstAddr}:${dstPort}",
-              writeToChannel = outbound,
               serverSocketTimeout = serverSocketTimeout,
           )
       )

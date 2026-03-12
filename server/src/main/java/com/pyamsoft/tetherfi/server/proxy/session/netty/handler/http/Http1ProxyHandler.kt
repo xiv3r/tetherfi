@@ -19,7 +19,7 @@ package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.http
 import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.DefaultProxyHandler
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.ProxyHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.RelayHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.dropHandler
@@ -40,12 +40,13 @@ import io.netty.handler.codec.http.HttpServerCodec
 import io.netty.handler.codec.http.HttpVersion
 import io.netty.util.ReferenceCountUtil
 
+// Cannot be shareable because of the local state messageQueue and outboundChannel
 internal class Http1ProxyHandler
 internal constructor(
     serverSocketTimeout: ServerSocketTimeout,
     private val tcpSocketCreator: ChannelCreator,
 ) :
-    DefaultProxyHandler(
+    ProxyHandler(
         serverSocketTimeout = serverSocketTimeout,
     ) {
 
@@ -139,9 +140,6 @@ internal constructor(
               // Read from the REMOTE and send back to the PROXY
               pipeline.addLast(
                   RelayHandler(
-                      id =
-                          "HTTPS-CONNECT-INBOUND-${parsed.resolvedHostName}:${parsed.resolvedPort}",
-                      writeToChannel = serverChannel,
                       serverSocketTimeout = serverSocketTimeout,
                   )
               )
@@ -153,6 +151,12 @@ internal constructor(
     // When this socket closes, close the outbound
     serverChannel.closeFuture().addListener { outbound.flushAndClose() }
     outbound.closeFuture().addListener { serverChannel.flushAndClose() }
+
+    outbound.apply {
+      attr(RelayHandler.TAG)
+          .set("HTTPS-CONNECT-INBOUND-${parsed.resolvedHostName}:${parsed.resolvedPort}")
+      attr(RelayHandler.WRITE_BACK_CHANNEL).set(serverChannel)
+    }
 
     future.addListener { future ->
       if (!future.isSuccess) {
@@ -176,11 +180,15 @@ internal constructor(
       // Read from the PROXY and send to the remote
       pipeline.addLast(
           RelayHandler(
-              id = "HTTPS-CONNECT-OUTBOUND-${parsed.resolvedHostName}:${parsed.resolvedPort}",
-              writeToChannel = outbound,
               serverSocketTimeout = serverSocketTimeout,
           )
       )
+
+      serverChannel.apply {
+        attr(RelayHandler.TAG)
+            .set("HTTPS-CONNECT-OUTBOUND-${parsed.resolvedHostName}:${parsed.resolvedPort}")
+        attr(RelayHandler.WRITE_BACK_CHANNEL).set(outbound)
+      }
 
       // Then establish connection
       Timber.d { "Write HTTPS connect to $parsed" }
@@ -227,8 +235,6 @@ internal constructor(
               // Read from the REMOTE and send back to the PROXY
               pipeline.addLast(
                   RelayHandler(
-                      id = "HTTP-FORWARD-INBOUND-${parsed.resolvedHostName}:${parsed.resolvedPort}",
-                      writeToChannel = serverChannel,
                       serverSocketTimeout = serverSocketTimeout,
                   )
               )
@@ -240,6 +246,12 @@ internal constructor(
     // When this socket closes, close the outbound
     serverChannel.closeFuture().addListener { outbound.flushAndClose() }
     outbound.closeFuture().addListener { serverChannel.flushAndClose() }
+
+    outbound.apply {
+      attr(RelayHandler.TAG)
+          .set("HTTP-FORWARD-INBOUND-${parsed.resolvedHostName}:${parsed.resolvedPort}")
+      attr(RelayHandler.WRITE_BACK_CHANNEL).set(serverChannel)
+    }
 
     future.addListener { future ->
       if (!future.isSuccess) {
@@ -263,11 +275,15 @@ internal constructor(
       // Read from the PROXY and send to REMOTE
       pipeline.addLast(
           RelayHandler(
-              id = "HTTP-FORWARD-OUTBOUND-${parsed.resolvedHostName}:${parsed.resolvedPort}",
-              writeToChannel = outbound,
               serverSocketTimeout = serverSocketTimeout,
           )
       )
+
+      serverChannel.apply {
+        attr(RelayHandler.TAG)
+            .set("HTTP-FORWARD-OUTBOUND-${parsed.resolvedHostName}:${parsed.resolvedPort}")
+        attr(RelayHandler.WRITE_BACK_CHANNEL).set(outbound)
+      }
 
       // Replay the initial request
       Timber.d { "Forward connect to $parsed" }

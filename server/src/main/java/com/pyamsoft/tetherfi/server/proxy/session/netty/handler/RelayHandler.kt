@@ -16,27 +16,53 @@
 
 package com.pyamsoft.tetherfi.server.proxy.session.netty.handler
 
+import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
+import io.ktor.util.network.address
+import io.ktor.util.network.port
 import io.netty.buffer.ByteBuf
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
+import io.netty.util.AttributeKey
 
 internal class RelayHandler
 internal constructor(
     serverSocketTimeout: ServerSocketTimeout,
-    id: String,
-    private val writeToChannel: Channel,
 ) :
-    DefaultProxyHandler(
+    ProxyHandler(
         serverSocketTimeout = serverSocketTimeout,
     ) {
 
-  init {
-    setChannelId(id)
+  @CheckResult
+  private fun getWritebackChannel(ctx: ChannelHandlerContext): Channel? {
+    return ctx.channel().attr(WRITE_BACK_CHANNEL).get()
   }
 
-  override fun onCloseChannels(ctx: ChannelHandlerContext) {}
+  @CheckResult
+  private fun getChannelTag(ctx: ChannelHandlerContext): String? {
+    return ctx.channel().attr(TAG).get()
+  }
+
+  override fun onChannelActive(ctx: ChannelHandlerContext) {
+    val tag = getChannelTag(ctx)
+    if (tag == null) {
+      val local = ctx.channel().localAddress()
+      setChannelId("RELAY-${local.address}:${local.port}")
+    } else {
+      setChannelId(tag)
+    }
+  }
+
+  override fun onCloseChannels(ctx: ChannelHandlerContext) {
+    ctx.flushAndClose()
+    getWritebackChannel(ctx)?.flushAndClose()
+
+    ctx.channel().apply {
+      attr(TAG).set(null)
+      attr(WRITE_BACK_CHANNEL).set(null)
+    }
+  }
 
   override fun sendErrorAndClose(ctx: ChannelHandlerContext, msg: Any) {
     // Can't do as this is a bytes based implementation
@@ -44,7 +70,16 @@ internal constructor(
   }
 
   override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
+    val writeToChannel = getWritebackChannel(ctx)
+    if (writeToChannel == null) {
+      Timber.w { "($channelId): channelRead writeToChannel is NULL" }
+      sendErrorAndClose(ctx, msg)
+      return
+    }
+
     if (!writeToChannel.isActive) {
+      Timber.w { "($channelId): channelRead writeToChannel is not active" }
+      sendErrorAndClose(ctx, msg)
       return
     }
 
@@ -60,11 +95,26 @@ internal constructor(
 
   override fun channelWritabilityChanged(ctx: ChannelHandlerContext) {
     try {
+      val writeToChannel = getWritebackChannel(ctx)
+      if (writeToChannel == null) {
+        Timber.w { "($channelId): channelWritabilityChanged writeToChannel is NULL" }
+        return
+      }
+
       val isWritable = ctx.channel().isWritable
       Timber.d { "($channelId) Relay write changed: $ctx $isWritable" }
       writeToChannel.config().isAutoRead = isWritable
     } finally {
       super.channelWritabilityChanged(ctx)
     }
+  }
+
+  companion object {
+    @JvmStatic
+    val WRITE_BACK_CHANNEL: AttributeKey<Channel> =
+        AttributeKey.newInstance("${RelayHandler::class.simpleName}-WRITE_BACK_CHANNEL")
+
+    @JvmStatic
+    val TAG: AttributeKey<String> = AttributeKey.newInstance("${RelayHandler::class.simpleName}-ID")
   }
 }
