@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks
+package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.udp
 
 import androidx.annotation.CheckResult
 import java.net.InetSocketAddress
@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 @JvmInline
 internal value class AtomicSocketAddressHolder private constructor(
-  private val atomic: AtomicReference<InetSocketAddress> = AtomicReference(null),
+  private val atomic: AtomicReference<InetSocketAddress>,
 ) : MutableSocketAddressHolder {
 
   override fun set(address: InetSocketAddress?) {
@@ -41,8 +41,8 @@ internal value class AtomicSocketAddressHolder private constructor(
 
     @JvmStatic
     @CheckResult
-    fun create(): MutableSocketAddressHolder {
-      return AtomicSocketAddressHolder()
+    fun create(address: InetSocketAddress? = null): MutableSocketAddressHolder {
+      return AtomicSocketAddressHolder(atomic = AtomicReference(address))
     }
 
   }

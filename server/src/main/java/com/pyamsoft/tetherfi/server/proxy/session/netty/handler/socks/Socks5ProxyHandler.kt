@@ -23,6 +23,7 @@ import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.dropHandler
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.udp.UdpControlSocketCreator
 import io.ktor.util.network.address
 import io.ktor.util.network.port
 import io.netty.channel.Channel
@@ -44,11 +45,11 @@ import java.net.InetSocketAddress
 
 internal class Socks5ProxyHandler
 internal constructor(
-    serverSocketTimeout: ServerSocketTimeout,
-    isDebug: Boolean,
-    socketTagger: SocketTagger,
-    androidPreferredNetwork: Network?,
-    private val udpControl: UdpControlSocketCreator,
+  serverSocketTimeout: ServerSocketTimeout,
+  isDebug: Boolean,
+  socketTagger: SocketTagger,
+  androidPreferredNetwork: Network?,
+  private val udpControl: UdpControlSocketCreator,
 ) :
     SocksProxyHandler<Socks5CommandRequest>(
         socketTagger = socketTagger,

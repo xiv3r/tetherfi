@@ -14,15 +14,22 @@
  * limitations under the License.
  */
 
-package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks
+package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.udp
 
 import androidx.annotation.CheckResult
+import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.FRAGMENT_ZERO
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.FRAGMENT_ZERO_INT
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.RESERVED_BYTE
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.RESERVED_BYTE_INT
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.resolveSocks5AddressType
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.ByteBufAllocator
+import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.socket.DatagramPacket
 import io.netty.handler.codec.socksx.v5.Socks5AddressType
-import io.netty.util.concurrent.EventExecutor
+import io.netty.resolver.DefaultAddressResolverGroup
 import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.InetSocketAddress
@@ -34,9 +41,9 @@ object UDP {
 
   @CheckResult
   private fun readAddress(
-      channelId: String,
-      buf: ByteBuf,
-      type: Socks5AddressType,
+    channelId: String,
+    buf: ByteBuf,
+    type: Socks5AddressType,
   ): String {
     try {
       when (type) {
@@ -105,11 +112,11 @@ object UDP {
   }
 
   fun unwrap(
-      channelId: String,
-      executor: EventExecutor,
-      msg: DatagramPacket,
-      onUnwrapped: (ByteBuf, InetSocketAddress) -> Unit,
-      onError: () -> Unit,
+    channelId: String,
+    ctx: ChannelHandlerContext,
+    msg: DatagramPacket,
+    onUnwrapped: (ByteBuf, InetSocketAddress) -> Unit,
+    onError: () -> Unit,
   ) {
     val buf = msg.content()
     // Drop bad connection
@@ -165,20 +172,39 @@ object UDP {
     // We must retain this slice or the underlying buffer will be cleaned up too early
     val data = buf.readRetainedSlice(buf.readableBytes())
 
-    // Build the destination
-    executor.submit {
-      // NOTE(Peter): This is blocking because it resolves DNS via system
-      val destination = InetSocketAddress(destinationAddr, destinationPort)
+    // Build the destination, unresolved so we do not block using the system DNS
+    val destination = InetSocketAddress.createUnresolved(destinationAddr, destinationPort)
 
+    // Resolve the destination with netty DNS
+    val resolver = DefaultAddressResolverGroup.INSTANCE.getResolver(ctx.executor())
+    if (resolver.isSupported(destination)) {
+      resolver.resolve(destination).addListener { future ->
+        if (!future.isSuccess) {
+          Timber.e(future.cause()) { "Failed to resolve address for UDP unwrap: ${destinationAddr}:${destinationPort}" }
+          onError()
+          return@addListener
+        }
+
+        val resolved = future.now.cast<InetSocketAddress>()
+        if (resolved == null) {
+          Timber.w { "Resolved future returned NULL for udp unwrap: ${destinationAddr}:${destinationPort}" }
+          onError()
+          return@addListener
+        }
+
+        onUnwrapped(data, resolved)
+      }
+    } else {
+      // Resolution is not supported, yolo continue?
       onUnwrapped(data, destination)
     }
   }
 
   @CheckResult
   fun wrap(
-      alloc: ByteBufAllocator,
-      sender: InetSocketAddress,
-      content: ByteBuf,
+    alloc: ByteBufAllocator,
+    sender: InetSocketAddress,
+    content: ByteBuf,
   ): ByteBuf {
     // May be able to initialize with 3
     return alloc.ioBuffer().apply {

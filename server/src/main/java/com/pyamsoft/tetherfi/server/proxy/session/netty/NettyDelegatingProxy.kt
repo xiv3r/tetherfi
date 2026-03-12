@@ -21,8 +21,8 @@ import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.ProtocolDelegatingHandler
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.UdpChannelCreator
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.UdpControlSocketCreator
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.udp.UdpChannelCreator
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.udp.UdpControlSocketCreator
 import io.netty.channel.Channel
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.socket.SocketChannel

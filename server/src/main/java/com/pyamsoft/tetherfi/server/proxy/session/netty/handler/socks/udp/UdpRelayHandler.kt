@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks
+package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.udp
 
 import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
@@ -23,7 +23,6 @@ import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.ProxyHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.handleIdleState
 import io.ktor.util.network.address
 import io.ktor.util.network.port
-import io.netty.buffer.ByteBufUtil
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.socket.DatagramPacket
 import io.netty.handler.codec.socksx.v5.DefaultSocks5CommandResponse
@@ -48,16 +47,11 @@ internal constructor(
   ) {
     UDP.unwrap(
         channelId = channelId,
+        ctx = ctx,
         msg = msg,
-        executor = ctx.executor(),
         onError = { sendErrorAndClose(ctx, msg) },
         onUnwrapped = { data, destination ->
           val packet = DatagramPacket(data, destination)
-          Timber.d {
-            "Send upstream: ${
-            ctx.channel().localAddress()
-          } -> $destination ${ByteBufUtil.hexDump(data)}"
-          }
           ctx.writeAndFlush(packet).addListener { packet.release() }
         },
     )
@@ -133,7 +127,6 @@ internal constructor(
         val content = msg.retain().content()
         val response = UDP.wrap(alloc = ctx.alloc(), sender = sender, content = content)
 
-        Timber.d { "Back to client: $client -> ${ByteBufUtil.hexDump(response)}" }
         val packet = DatagramPacket(response, client)
         ctx.writeAndFlush(packet).addListener { msg.release() }
       }

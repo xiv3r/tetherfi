@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks
+package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.udp
 
 import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.flushAndClose
 import io.netty.channel.ChannelFuture
 import java.net.InetSocketAddress
@@ -73,8 +74,7 @@ internal constructor(
 
     val info: UdpInfo
     if (existing == null) {
-      Timber.d { "Create new socket: $tcpControlClient" }
-      val tcpControl = AtomicSocketAddressHolder.create()
+      val tcpControl = AtomicSocketAddressHolder.create(tcpControlClient)
       val backToClient = AtomicSocketAddressHolder.create()
 
       val socket =
@@ -91,7 +91,6 @@ internal constructor(
         )
           .also { knownSockets.add(it) }
     } else {
-      Timber.d { "Re-use existing socket: $existing" }
       info = existing
     }
 
