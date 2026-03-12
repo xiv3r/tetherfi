@@ -211,3 +211,8 @@ internal fun ChannelFuture.flushAndClose() {
   val self = this
   self.channel().flushAndClose()
 }
+
+internal fun ChannelHandlerContext.flushAndClose() {
+  val self = this
+  self.channel().flushAndClose()
+}

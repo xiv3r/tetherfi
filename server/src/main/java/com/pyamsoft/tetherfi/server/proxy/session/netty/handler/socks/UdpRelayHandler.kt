@@ -30,13 +30,12 @@ import io.netty.handler.codec.socksx.v5.DefaultSocks5CommandResponse
 import io.netty.handler.codec.socksx.v5.Socks5AddressType
 import io.netty.handler.codec.socksx.v5.Socks5CommandStatus
 import java.net.InetSocketAddress
-import java.util.concurrent.atomic.AtomicReference
 
 internal class UdpRelayHandler
 internal constructor(
     serverSocketTimeout: ServerSocketTimeout,
-    private val getTcpControl: AtomicReference<InetSocketAddress>,
-    private val backToClient: AtomicReference<InetSocketAddress>,
+    private val getTcpControl: SocketAddressHolder,
+    private val backToClient: MutableSocketAddressHolder,
     private val unregister: () -> Unit,
 ) :
     ProxyHandler(

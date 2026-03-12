@@ -23,21 +23,20 @@ import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.flushAndClose
 import io.netty.channel.ChannelFuture
 import java.net.InetSocketAddress
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicReference
 
 internal class UdpControlSocketCreator
 internal constructor(
-    private val creator: ChannelCreator,
+  private val creator: ChannelCreator,
 ) {
 
   private val knownSockets: MutableSet<UdpInfo> = ConcurrentHashMap.newKeySet()
 
   private fun unregister(
-      tcpControl: AtomicReference<InetSocketAddress>,
-      backToClient: AtomicReference<InetSocketAddress>,
-      tcpControlAddress: InetSocketAddress,
+    tcpControl: MutableSocketAddressHolder,
+    backToClient: MutableSocketAddressHolder,
+    tcpControlAddress: InetSocketAddress,
   ) {
-    if (tcpControl.compareAndSet(tcpControlAddress, null)) {
+    if (tcpControl.compareAndSet(expected = tcpControlAddress, update = null)) {
       Timber.d { "Unregistered client from socket: $tcpControlAddress" }
       backToClient.set(null)
     }
@@ -45,21 +44,21 @@ internal constructor(
 
   @CheckResult
   private fun newSocket(
-      tcpControlAddress: InetSocketAddress,
-      tcpControl: AtomicReference<InetSocketAddress>,
-      backToClient: AtomicReference<InetSocketAddress>,
+    tcpControlAddress: InetSocketAddress,
+    tcpControl: MutableSocketAddressHolder,
+    backToClient: MutableSocketAddressHolder,
   ): ChannelFuture =
-      creator.bind { ch ->
-        val handler =
-            UdpRelayHandler(
-                serverSocketTimeout = UDP_RELAY_TIMEOUT,
-                getTcpControl = tcpControl,
-                backToClient = backToClient,
-                unregister = { unregister(tcpControl, backToClient, tcpControlAddress) },
-            )
-        val pipeline = ch.pipeline()
-        pipeline.addLast(handler)
-      }
+    creator.bind { ch ->
+      val handler =
+        UdpRelayHandler(
+          serverSocketTimeout = UDP_RELAY_TIMEOUT,
+          getTcpControl = tcpControl,
+          backToClient = backToClient,
+          unregister = { unregister(tcpControl, backToClient, tcpControlAddress) },
+        )
+      val pipeline = ch.pipeline()
+      pipeline.addLast(handler)
+    }
 
   @CheckResult
   fun register(tcpControlClient: InetSocketAddress): UdpControl {
@@ -75,21 +74,22 @@ internal constructor(
     val info: UdpInfo
     if (existing == null) {
       Timber.d { "Create new socket: $tcpControlClient" }
-      val tcpControl = AtomicReference(tcpControlClient)
-      val backToClient = AtomicReference<InetSocketAddress>(null)
+      val tcpControl = AtomicSocketAddressHolder.create()
+      val backToClient = AtomicSocketAddressHolder.create()
+
       val socket =
-          newSocket(
-              tcpControlAddress = tcpControlClient,
-              tcpControl = tcpControl,
-              backToClient = backToClient,
-          )
+        newSocket(
+          tcpControlAddress = tcpControlClient,
+          tcpControl = tcpControl,
+          backToClient = backToClient,
+        )
       info =
-          UdpInfo(
-                  socket = socket,
-                  tcpControl = tcpControl,
-                  backToClient = backToClient,
-              )
-              .also { knownSockets.add(it) }
+        UdpInfo(
+          socket = socket,
+          tcpControl = tcpControl,
+          backToClient = backToClient,
+        )
+          .also { knownSockets.add(it) }
     } else {
       Timber.d { "Re-use existing socket: $existing" }
       info = existing
@@ -108,16 +108,16 @@ internal constructor(
   @ConsistentCopyVisibility
   internal data class UdpInfo
   internal constructor(
-      val socket: ChannelFuture,
-      val tcpControl: AtomicReference<InetSocketAddress>,
-      val backToClient: AtomicReference<InetSocketAddress>,
+    val socket: ChannelFuture,
+    val tcpControl: MutableSocketAddressHolder,
+    val backToClient: MutableSocketAddressHolder,
   )
 
   @ConsistentCopyVisibility
   internal data class UdpControl
   internal constructor(
-      val socket: ChannelFuture,
-      val unregister: () -> Unit,
+    val socket: ChannelFuture,
+    val unregister: () -> Unit,
   )
 
   companion object {
