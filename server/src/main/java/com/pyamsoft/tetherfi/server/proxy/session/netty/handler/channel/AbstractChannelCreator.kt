@@ -33,33 +33,28 @@ internal constructor(
   private val channelFactory by lazy { channelFactoryCreator() }
 
   @CheckResult
-  private fun doBind(hostName: String?, onChannelInitialized: (Channel) -> Unit): ChannelFuture {
-    val server =
-        Bootstrap()
-            .group(eventLoop)
-            .channelFactory(channelFactory)
-            .handler(
-                object : ChannelInitializer<Channel>() {
-                  override fun initChannel(ch: Channel) {
-                    onChannelInitialized(ch)
-                  }
-                }
-            )
-
-    return server.run {
-      if (hostName.isNullOrBlank()) {
-        bind(0)
-      } else {
-        bind(hostName, 0)
-      }
-    }
+  private fun bootstrap(onChannelInitialized: (Channel) -> Unit): Bootstrap {
+    return Bootstrap()
+        .group(eventLoop)
+        .channelFactory(channelFactory)
+        .handler(
+            object : ChannelInitializer<Channel>() {
+              override fun initChannel(ch: Channel) {
+                onChannelInitialized(ch)
+              }
+            }
+        )
   }
 
   override fun bind(onChannelInitialized: (Channel) -> Unit): ChannelFuture {
-    return doBind(hostName = null, onChannelInitialized = onChannelInitialized)
+    return bootstrap(onChannelInitialized).bind(0)
   }
 
-  override fun bind(hostName: String, onChannelInitialized: (Channel) -> Unit): ChannelFuture {
-    return doBind(hostName = hostName, onChannelInitialized = onChannelInitialized)
+  override fun connect(
+      hostName: String,
+      port: Int,
+      onChannelInitialized: (Channel) -> Unit,
+  ): ChannelFuture {
+    return bootstrap(onChannelInitialized).connect(hostName, port)
   }
 }

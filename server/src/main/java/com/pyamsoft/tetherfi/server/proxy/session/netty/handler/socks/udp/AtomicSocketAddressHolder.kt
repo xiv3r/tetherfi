@@ -21,8 +21,9 @@ import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicReference
 
 @JvmInline
-internal value class AtomicSocketAddressHolder private constructor(
-  private val atomic: AtomicReference<InetSocketAddress>,
+internal value class AtomicSocketAddressHolder
+private constructor(
+    private val atomic: AtomicReference<InetSocketAddress>,
 ) : MutableSocketAddressHolder {
 
   override fun set(address: InetSocketAddress?) {
@@ -44,6 +45,5 @@ internal value class AtomicSocketAddressHolder private constructor(
     fun create(address: InetSocketAddress? = null): MutableSocketAddressHolder {
       return AtomicSocketAddressHolder(atomic = AtomicReference(address))
     }
-
   }
 }

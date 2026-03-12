@@ -22,14 +22,12 @@ import io.netty.channel.ChannelFuture
 
 internal interface ChannelCreator {
 
-  @CheckResult
-  fun bind(
-      onChannelInitialized: (Channel) -> Unit,
-  ): ChannelFuture
+  @CheckResult fun bind(onChannelInitialized: (Channel) -> Unit): ChannelFuture
 
   @CheckResult
-  fun bind(
+  fun connect(
       hostName: String,
+      port: Int,
       onChannelInitialized: (Channel) -> Unit,
   ): ChannelFuture
 }

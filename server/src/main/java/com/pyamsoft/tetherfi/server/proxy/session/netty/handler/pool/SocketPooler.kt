@@ -14,19 +14,22 @@
  * limitations under the License.
  */
 
-package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.udp
+package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.pool
 
 import androidx.annotation.CheckResult
-import java.net.InetSocketAddress
+import io.netty.channel.ChannelFuture
 
-interface SocketAddressHolder {
+internal interface SocketPooler<Key : Any> : AutoCloseable {
 
-  @CheckResult fun get(): InetSocketAddress?
-}
+  @CheckResult fun register(key: Key): Lease
 
-interface MutableSocketAddressHolder : SocketAddressHolder {
+  interface Entry {
 
-  fun set(address: InetSocketAddress?)
+    val socket: ChannelFuture
+  }
 
-  @CheckResult fun compareAndSet(expected: InetSocketAddress?, update: InetSocketAddress?): Boolean
+  interface Lease : Entry {
+
+    fun unregister()
+  }
 }

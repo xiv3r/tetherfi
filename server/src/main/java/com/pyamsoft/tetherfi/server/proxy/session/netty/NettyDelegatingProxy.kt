@@ -17,11 +17,15 @@
 package com.pyamsoft.tetherfi.server.proxy.session.netty
 
 import android.net.Network
+import com.pyamsoft.pydroid.core.requireNotNull
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.ProtocolDelegatingHandler
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.udp.UdpChannelCreator
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.TcpChannelCreator
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.UdpChannelCreator
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.pool.UdpSocketPooler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.udp.UdpControlSocketCreator
 import io.netty.channel.Channel
 import io.netty.channel.EventLoopGroup
@@ -33,6 +37,7 @@ import kotlinx.coroutines.CoroutineScope
 
 class NettyDelegatingProxy
 internal constructor(
+    // TODO Unused? Do we need a clock for timings?
     private val clock: Clock,
     host: String,
     private val isDebug: Boolean,
@@ -57,7 +62,8 @@ internal constructor(
         onError = onError,
     ) {
 
-  private var udpControlSocketCreator: UdpControlSocketCreator? = null
+  private var udpControlSocketCreator: UdpSocketPooler? = null
+  private var tcpSocketCreator: ChannelCreator? = null
 
   override fun onServerStarted(
       scope: CoroutineScope,
@@ -69,6 +75,7 @@ internal constructor(
     if (isSocksEnabled) {
       udpControlSocketCreator =
           UdpControlSocketCreator(
+              serverSocketTimeout = serverSocketTimeout,
               creator =
                   UdpChannelCreator(
                       eventLoop = workerGroup,
@@ -77,11 +84,20 @@ internal constructor(
                   ),
           )
     }
+
+    tcpSocketCreator =
+        TcpChannelCreator(
+            eventLoop = workerGroup,
+            socketTagger = socketTagger,
+            androidPreferredNetwork = androidPreferredNetwork,
+        )
   }
 
   override fun onServerStopped() {
     udpControlSocketCreator?.close()
     udpControlSocketCreator = null
+
+    tcpSocketCreator = null
   }
 
   override fun onChannelInitialized(channel: SocketChannel) {
@@ -94,10 +110,12 @@ internal constructor(
     // And bind our proxy relay handler
     pipeline.addLast(
         ProtocolDelegatingHandler(
+            // This will be resolved in time I am pretty sure :)
+            tcpSocketCreator = tcpSocketCreator.requireNotNull(),
+
+            // If this is NULL, then SOCKS is disabled.
+            // If non-null SOCKS is enabled
             udpControlSocketCreator = udpControlSocketCreator,
-            isDebug = isDebug,
-            socketTagger = socketTagger,
-            androidPreferredNetwork = androidPreferredNetwork,
             isHttpEnabled = isHttpEnabled,
             serverSocketTimeout = serverSocketTimeout,
         )

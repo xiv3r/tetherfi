@@ -16,14 +16,13 @@
 
 package com.pyamsoft.tetherfi.server.proxy.session.netty.handler
 
-import android.net.Network
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
-import com.pyamsoft.tetherfi.server.proxy.SocketTagger
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.http.Http1ProxyHandler
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.pool.UdpSocketPooler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.Socks4ProxyHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.Socks5ProxyHandler
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.udp.UdpControlSocketCreator
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.ByteToMessageDecoder
@@ -38,10 +37,8 @@ import io.netty.handler.codec.socksx.v5.Socks5ServerEncoder
 internal class ProtocolDelegatingHandler
 internal constructor(
     // IF this is NULL, SOCKS is not enabled
-    private val udpControlSocketCreator: UdpControlSocketCreator?,
-    private val isDebug: Boolean,
-    private val socketTagger: SocketTagger,
-    private val androidPreferredNetwork: Network?,
+    private val udpControlSocketCreator: UdpSocketPooler?,
+    private val tcpSocketCreator: ChannelCreator,
     private val isHttpEnabled: Boolean,
     private val serverSocketTimeout: ServerSocketTimeout,
 ) : ByteToMessageDecoder() {
@@ -78,9 +75,7 @@ internal constructor(
 
           pipeline.addLast(
               Socks4ProxyHandler(
-                  isDebug = isDebug,
-                  socketTagger = socketTagger,
-                  androidPreferredNetwork = androidPreferredNetwork,
+                  tcpSocketCreator = tcpSocketCreator,
                   serverSocketTimeout = serverSocketTimeout,
               )
           )
@@ -100,10 +95,8 @@ internal constructor(
 
           pipeline.addLast(
               Socks5ProxyHandler(
-                  udpControl = udpControl,
-                  isDebug = isDebug,
-                  socketTagger = socketTagger,
-                  androidPreferredNetwork = androidPreferredNetwork,
+                  udpSocketPooler = udpControl,
+                  tcpSocketCreator = tcpSocketCreator,
                   serverSocketTimeout = serverSocketTimeout,
               )
           )
@@ -121,9 +114,7 @@ internal constructor(
           // And bind our proxy relay handler
           pipeline.addLast(
               Http1ProxyHandler(
-                  isDebug = isDebug,
-                  socketTagger = socketTagger,
-                  androidPreferredNetwork = androidPreferredNetwork,
+                  tcpSocketCreator = tcpSocketCreator,
                   serverSocketTimeout = serverSocketTimeout,
               )
           )

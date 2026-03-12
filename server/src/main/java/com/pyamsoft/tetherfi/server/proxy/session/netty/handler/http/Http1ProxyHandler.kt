@@ -16,16 +16,14 @@
 
 package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.http
 
-import android.net.Network
 import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
-import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.DefaultProxyHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.RelayHandler
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.dropHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.flushAndClose
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.newOutboundConnection
 import io.ktor.util.network.address
 import io.ktor.util.network.port
 import io.netty.buffer.Unpooled
@@ -45,9 +43,7 @@ import io.netty.util.ReferenceCountUtil
 internal class Http1ProxyHandler
 internal constructor(
     serverSocketTimeout: ServerSocketTimeout,
-    private val isDebug: Boolean,
-    private val socketTagger: SocketTagger,
-    private val androidPreferredNetwork: Network?,
+    private val tcpSocketCreator: ChannelCreator,
 ) :
     DefaultProxyHandler(
         serverSocketTimeout = serverSocketTimeout,
@@ -134,14 +130,10 @@ internal constructor(
     val serverChannel = ctx.channel()
 
     val future =
-        newOutboundConnection(
-            isDebug = isDebug,
-            channel = serverChannel,
+        tcpSocketCreator.connect(
             hostName = parsed.resolvedHostName,
             port = parsed.resolvedPort,
-            socketTagger = socketTagger,
-            androidPreferredNetwork = androidPreferredNetwork,
-            onChannelOpened = { ch ->
+            onChannelInitialized = { ch ->
               val pipeline = ch.pipeline()
 
               // Read from the REMOTE and send back to the PROXY
@@ -155,6 +147,7 @@ internal constructor(
               )
             },
         )
+
     val outbound = future.channel()
 
     // When this socket closes, close the outbound
@@ -222,14 +215,10 @@ internal constructor(
     val serverChannel = ctx.channel()
 
     val future =
-        newOutboundConnection(
-            isDebug = isDebug,
-            channel = serverChannel,
+        tcpSocketCreator.connect(
             hostName = parsed.resolvedHostName,
             port = parsed.resolvedPort,
-            socketTagger = socketTagger,
-            androidPreferredNetwork = androidPreferredNetwork,
-            onChannelOpened = { ch ->
+            onChannelInitialized = { ch ->
               val pipeline = ch.pipeline()
 
               // Must speak HTTP to replay the initial message

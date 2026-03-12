@@ -14,19 +14,8 @@
  * limitations under the License.
  */
 
-package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.udp
+package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.pool
 
-import androidx.annotation.CheckResult
 import java.net.InetSocketAddress
 
-interface SocketAddressHolder {
-
-  @CheckResult fun get(): InetSocketAddress?
-}
-
-interface MutableSocketAddressHolder : SocketAddressHolder {
-
-  fun set(address: InetSocketAddress?)
-
-  @CheckResult fun compareAndSet(expected: InetSocketAddress?, update: InetSocketAddress?): Boolean
-}
+internal typealias UdpSocketPooler = SocketPooler<InetSocketAddress>

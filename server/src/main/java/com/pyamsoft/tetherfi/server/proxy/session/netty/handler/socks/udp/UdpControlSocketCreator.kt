@@ -20,22 +20,21 @@ import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.flushAndClose
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.pool.AbstractSocketPooler
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.pool.SocketPooler
 import io.netty.channel.ChannelFuture
 import java.net.InetSocketAddress
-import java.util.concurrent.ConcurrentHashMap
 
 internal class UdpControlSocketCreator
 internal constructor(
-  private val creator: ChannelCreator,
-) {
-
-  private val knownSockets: MutableSet<UdpInfo> = ConcurrentHashMap.newKeySet()
+    private val creator: ChannelCreator,
+    private val serverSocketTimeout: ServerSocketTimeout,
+) : AbstractSocketPooler<InetSocketAddress, UdpControlSocketCreator.UdpInfo>() {
 
   private fun unregister(
-    tcpControl: MutableSocketAddressHolder,
-    backToClient: MutableSocketAddressHolder,
-    tcpControlAddress: InetSocketAddress,
+      tcpControl: MutableSocketAddressHolder,
+      backToClient: MutableSocketAddressHolder,
+      tcpControlAddress: InetSocketAddress,
   ) {
     if (tcpControl.compareAndSet(expected = tcpControlAddress, update = null)) {
       Timber.d { "Unregistered client from socket: $tcpControlAddress" }
@@ -45,82 +44,49 @@ internal constructor(
 
   @CheckResult
   private fun newSocket(
-    tcpControlAddress: InetSocketAddress,
-    tcpControl: MutableSocketAddressHolder,
-    backToClient: MutableSocketAddressHolder,
+      tcpControlAddress: InetSocketAddress,
+      tcpControl: MutableSocketAddressHolder,
+      backToClient: MutableSocketAddressHolder,
   ): ChannelFuture =
-    creator.bind { ch ->
-      val handler =
-        UdpRelayHandler(
-          serverSocketTimeout = UDP_RELAY_TIMEOUT,
-          getTcpControl = tcpControl,
-          backToClient = backToClient,
-          unregister = { unregister(tcpControl, backToClient, tcpControlAddress) },
-        )
-      val pipeline = ch.pipeline()
-      pipeline.addLast(handler)
-    }
-
-  @CheckResult
-  fun register(tcpControlClient: InetSocketAddress): UdpControl {
-    var existing: UdpInfo? = null
-    for (known in knownSockets) {
-      if (known.tcpControl.compareAndSet(null, tcpControlClient)) {
-        // We took over this socket
-        existing = known
-        break
+      creator.bind { ch ->
+        val handler =
+            UdpRelayHandler(
+                serverSocketTimeout = serverSocketTimeout,
+                getTcpControl = tcpControl,
+                backToClient = backToClient,
+                unregister = { unregister(tcpControl, backToClient, tcpControlAddress) },
+            )
+        val pipeline = ch.pipeline()
+        pipeline.addLast(handler)
       }
-    }
 
-    val info: UdpInfo
-    if (existing == null) {
-      val tcpControl = AtomicSocketAddressHolder.create(tcpControlClient)
-      val backToClient = AtomicSocketAddressHolder.create()
-
-      val socket =
-        newSocket(
-          tcpControlAddress = tcpControlClient,
-          tcpControl = tcpControl,
-          backToClient = backToClient,
-        )
-      info =
-        UdpInfo(
-          socket = socket,
-          tcpControl = tcpControl,
-          backToClient = backToClient,
-        )
-          .also { knownSockets.add(it) }
-    } else {
-      info = existing
-    }
-
-    return UdpControl(socket = info.socket) {
-      unregister(info.tcpControl, info.backToClient, tcpControlClient)
-    }
+  override fun claimExistingLease(known: UdpInfo, key: InetSocketAddress): Boolean {
+    return known.tcpControl.compareAndSet(null, key)
   }
 
-  fun close() {
-    knownSockets.forEach { it.socket.flushAndClose() }
-    knownSockets.clear()
+  override fun createNewSocket(key: InetSocketAddress): UdpInfo {
+    val tcpControl = AtomicSocketAddressHolder.create(key)
+    val backToClient = AtomicSocketAddressHolder.create()
+
+    val socket =
+        newSocket(
+            tcpControlAddress = key,
+            tcpControl = tcpControl,
+            backToClient = backToClient,
+        )
+
+    return UdpInfo(
+        socket = socket,
+        tcpControl = tcpControl,
+        backToClient = backToClient,
+    )
   }
 
   @ConsistentCopyVisibility
   internal data class UdpInfo
   internal constructor(
-    val socket: ChannelFuture,
-    val tcpControl: MutableSocketAddressHolder,
-    val backToClient: MutableSocketAddressHolder,
-  )
-
-  @ConsistentCopyVisibility
-  internal data class UdpControl
-  internal constructor(
-    val socket: ChannelFuture,
-    val unregister: () -> Unit,
-  )
-
-  companion object {
-
-    private val UDP_RELAY_TIMEOUT = ServerSocketTimeout.create(10)
-  }
+      override val socket: ChannelFuture,
+      val tcpControl: MutableSocketAddressHolder,
+      val backToClient: MutableSocketAddressHolder,
+  ) : SocketPooler.Entry
 }

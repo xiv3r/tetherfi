@@ -14,27 +14,26 @@
  * limitations under the License.
  */
 
-package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.udp
+package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel
 
 import android.net.Network
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
-import com.pyamsoft.tetherfi.server.proxy.session.netty.factory.NetworkBoundDatagramChannelFactory
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.AbstractChannelCreator
+import com.pyamsoft.tetherfi.server.proxy.session.netty.factory.NetworkBoundSocketChannelFactory
 import io.netty.channel.EventLoopGroup
-import io.netty.channel.socket.DatagramChannel
+import io.netty.channel.socket.SocketChannel
 
-internal class UdpChannelCreator
+internal class TcpChannelCreator
 internal constructor(
-  eventLoop: EventLoopGroup,
-  socketTagger: SocketTagger,
-  androidPreferredNetwork: Network?,
+    eventLoop: EventLoopGroup,
+    socketTagger: SocketTagger,
+    androidPreferredNetwork: Network?,
 ) :
-    AbstractChannelCreator<DatagramChannel>(
+    AbstractChannelCreator<SocketChannel>(
         eventLoop = eventLoop,
         channelFactoryCreator = {
-          NetworkBoundDatagramChannelFactory(
-            socketTagger = socketTagger,
-            androidPreferredNetwork = androidPreferredNetwork,
+          NetworkBoundSocketChannelFactory(
+              socketTagger = socketTagger,
+              androidPreferredNetwork = androidPreferredNetwork,
           )
         },
     )

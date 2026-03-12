@@ -16,14 +16,14 @@
 
 package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks
 
-import android.net.Network
 import androidx.annotation.CheckResult
 import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
-import com.pyamsoft.tetherfi.server.proxy.SocketTagger
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.dropHandler
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.udp.UdpControlSocketCreator
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.flushAndClose
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.pool.UdpSocketPooler
 import io.ktor.util.network.address
 import io.ktor.util.network.port
 import io.netty.channel.Channel
@@ -45,17 +45,13 @@ import java.net.InetSocketAddress
 
 internal class Socks5ProxyHandler
 internal constructor(
-  serverSocketTimeout: ServerSocketTimeout,
-  isDebug: Boolean,
-  socketTagger: SocketTagger,
-  androidPreferredNetwork: Network?,
-  private val udpControl: UdpControlSocketCreator,
+    serverSocketTimeout: ServerSocketTimeout,
+    tcpSocketCreator: ChannelCreator,
+    private val udpSocketPooler: UdpSocketPooler,
 ) :
     SocksProxyHandler<Socks5CommandRequest>(
-        socketTagger = socketTagger,
-        androidPreferredNetwork = androidPreferredNetwork,
-        isDebug = isDebug,
         serverSocketTimeout = serverSocketTimeout,
+        tcpSocketCreator = tcpSocketCreator,
     ) {
 
   @CheckResult
@@ -93,15 +89,15 @@ internal constructor(
     }
 
     Timber.d { "Register UDP for TCP control $tcpControlAddress" }
-    val udpControl = udpControl.register(tcpControlAddress)
+    val lease = udpSocketPooler.register(tcpControlAddress)
+    // When this channel closes, remove it from the registered list
+    serverChannel.closeFuture().addListener { lease.unregister() }
+
+    val udpFuture = lease.socket
+    val udpSocket = udpFuture.channel()
 
     // When the shared UDP control socket closes, close this socket
-    val udpFuture = udpControl.socket
-    val controlSocket = udpFuture.channel()
-
-    // Register the client
-    // When this channel closes, remove it from the registered list
-    serverChannel.closeFuture().addListener { udpControl.unregister() }
+    udpSocket.closeFuture().addListener { serverChannel.flushAndClose() }
 
     udpFuture.addListener { future ->
       if (!future.isSuccess) {
@@ -110,7 +106,7 @@ internal constructor(
         return@addListener
       }
 
-      val relayControl = controlSocket.localAddress()
+      val relayControl = udpSocket.localAddress()
       if (relayControl == null) {
         Timber.w { "SOCKS UDP-ASSOC proxied outbound remote==null" }
         sendFailureAndClose(ctx, msg)

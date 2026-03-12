@@ -16,16 +16,14 @@
 
 package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks
 
-import android.net.Network
 import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
-import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.DefaultProxyHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.RelayHandler
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.dropHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.flushAndClose
-import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.newOutboundConnection
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelPipeline
@@ -36,9 +34,7 @@ import io.netty.handler.codec.socksx.v5.Socks5CommandRequest
 internal abstract class SocksProxyHandler<T : SocksMessage>
 internal constructor(
     serverSocketTimeout: ServerSocketTimeout,
-    private val socketTagger: SocketTagger,
-    private val androidPreferredNetwork: Network?,
-    private val isDebug: Boolean,
+    private val tcpSocketCreator: ChannelCreator,
 ) :
     DefaultProxyHandler(
         serverSocketTimeout = serverSocketTimeout,
@@ -91,14 +87,10 @@ internal constructor(
     val serverChannel = ctx.channel()
 
     val connectSocket =
-        newOutboundConnection(
-            isDebug = isDebug,
-            channel = channel,
+        tcpSocketCreator.connect(
             hostName = dstAddr,
             port = dstPort,
-            socketTagger = socketTagger,
-            androidPreferredNetwork = androidPreferredNetwork,
-            onChannelOpened = { ch ->
+            onChannelInitialized = { ch ->
               val pipeline = ch.pipeline()
 
               // Read from the REMOTE and send back to the PROXY

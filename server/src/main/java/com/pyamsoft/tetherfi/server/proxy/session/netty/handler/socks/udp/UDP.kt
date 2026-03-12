@@ -41,9 +41,9 @@ object UDP {
 
   @CheckResult
   private fun readAddress(
-    channelId: String,
-    buf: ByteBuf,
-    type: Socks5AddressType,
+      channelId: String,
+      buf: ByteBuf,
+      type: Socks5AddressType,
   ): String {
     try {
       when (type) {
@@ -112,11 +112,11 @@ object UDP {
   }
 
   fun unwrap(
-    channelId: String,
-    ctx: ChannelHandlerContext,
-    msg: DatagramPacket,
-    onUnwrapped: (ByteBuf, InetSocketAddress) -> Unit,
-    onError: () -> Unit,
+      channelId: String,
+      ctx: ChannelHandlerContext,
+      msg: DatagramPacket,
+      onUnwrapped: (ByteBuf, InetSocketAddress) -> Unit,
+      onError: () -> Unit,
   ) {
     val buf = msg.content()
     // Drop bad connection
@@ -180,14 +180,18 @@ object UDP {
     if (resolver.isSupported(destination)) {
       resolver.resolve(destination).addListener { future ->
         if (!future.isSuccess) {
-          Timber.e(future.cause()) { "Failed to resolve address for UDP unwrap: ${destinationAddr}:${destinationPort}" }
+          Timber.e(future.cause()) {
+            "Failed to resolve address for UDP unwrap: ${destinationAddr}:${destinationPort}"
+          }
           onError()
           return@addListener
         }
 
         val resolved = future.now.cast<InetSocketAddress>()
         if (resolved == null) {
-          Timber.w { "Resolved future returned NULL for udp unwrap: ${destinationAddr}:${destinationPort}" }
+          Timber.w {
+            "Resolved future returned NULL for udp unwrap: ${destinationAddr}:${destinationPort}"
+          }
           onError()
           return@addListener
         }
@@ -202,9 +206,9 @@ object UDP {
 
   @CheckResult
   fun wrap(
-    alloc: ByteBufAllocator,
-    sender: InetSocketAddress,
-    content: ByteBuf,
+      alloc: ByteBufAllocator,
+      sender: InetSocketAddress,
+      content: ByteBuf,
   ): ByteBuf {
     // May be able to initialize with 3
     return alloc.ioBuffer().apply {

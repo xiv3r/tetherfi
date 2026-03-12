@@ -26,20 +26,20 @@ import java.nio.channels.SocketChannel as JavaSocketChannel
 
 internal class NetworkBoundSocketChannelFactory
 internal constructor(
-  private val socketTagger: SocketTagger,
-  private val androidPreferredNetwork: Network?,
+    private val socketTagger: SocketTagger,
+    private val androidPreferredNetwork: Network?,
 ) : ChannelFactory<SocketChannel> {
 
   override fun newChannel(): SocketChannel {
     socketTagger.tagSocket()
 
     val outboundSocketChannel =
-      JavaSocketChannel.open().apply {
-        configureBlocking(false)
+        JavaSocketChannel.open().apply {
+          configureBlocking(false)
 
-        setOption(StandardSocketOptions.TCP_NODELAY, true)
-        setOption(StandardSocketOptions.SO_REUSEADDR, true)
-      }
+          setOption(StandardSocketOptions.TCP_NODELAY, true)
+          setOption(StandardSocketOptions.SO_REUSEADDR, true)
+        }
 
     val socket = outboundSocketChannel.socket()
     androidPreferredNetwork?.bindSocket(socket)
