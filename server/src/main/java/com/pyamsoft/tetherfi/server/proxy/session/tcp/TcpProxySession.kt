@@ -54,8 +54,7 @@ protected constructor(
 
   private val logTag: String by lazy { proxyType.name }
 
-  private fun CoroutineScope.handleClientRequestSideEffects(
-      serverDispatcher: ServerDispatcher,
+  private fun handleClientRequestSideEffects(
       client: TetherClient,
   ) {
     enforcer.assertOffMainThread()
@@ -70,18 +69,17 @@ protected constructor(
     //
     // Though, arguably, blocking is only a nice to have. Real network security should be handled
     // via the password.
-    launch(context = serverDispatcher.sideEffect) { allowedClients.seen(client) }
+    allowedClients.seen(client)
   }
 
-  private fun CoroutineScope.handleClientReportSideEffects(
-      serverDispatcher: ServerDispatcher,
+  private fun handleClientReportSideEffects(
       report: ByteTransferReport,
       client: TetherClient,
   ) {
     enforcer.assertOffMainThread()
 
     // Track the report for the given client
-    launch(context = serverDispatcher.sideEffect) { allowedClients.reportTransfer(client, report) }
+    allowedClients.reportTransfer(client, report)
   }
 
   @CheckResult
@@ -132,7 +130,6 @@ protected constructor(
     // we just "spin up" another thread and forget about it performance wise.
     scope.launch(context = serverDispatcher.primary) {
       handleClientRequestSideEffects(
-          serverDispatcher = serverDispatcher,
           client = client,
       )
     }
@@ -158,7 +155,6 @@ protected constructor(
           // we just "spin up" another thread and forget about it performance wise.
           scope.launch(context = serverDispatcher.primary) {
             handleClientReportSideEffects(
-                serverDispatcher = serverDispatcher,
                 report = report,
                 client = client,
             )

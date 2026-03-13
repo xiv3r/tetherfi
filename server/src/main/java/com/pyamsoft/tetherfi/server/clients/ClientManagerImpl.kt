@@ -25,6 +25,7 @@ import com.pyamsoft.tetherfi.server.TweakPreferences
 import com.pyamsoft.tetherfi.server.event.ServerShutdownEvent
 import java.time.Clock
 import java.time.LocalDateTime
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration
@@ -62,7 +63,7 @@ internal constructor(
   private val blockedClients = MutableStateFlow<Map<String, TetherClient>>(emptyMap())
   private val allowedClients = MutableStateFlow<Map<String, TetherClient>>(emptyMap())
 
-  private val jobs = MutableStateFlow<Collection<Job>>(emptySet())
+  private val jobs: MutableSet<Job> = ConcurrentHashMap.newKeySet()
 
   @CheckResult
   private fun markLastSeenNow(client: TetherClient): TetherClient =
@@ -104,15 +105,6 @@ internal constructor(
     inAppRatingPreferences.markDeviceConnected()
   }
 
-  @Suppress("UnusedReceiverParameter")
-  private fun CoroutineScope.onClientsUpdated(
-      @Suppress("UNUSED_PARAMETER") clients: Collection<TetherClient>,
-  ) {
-    // TODO(Peter): Should we restart the watchForNoClients timer here?
-    //              This function could be called a bunch and it would cause tons of scopes to be
-    //              created and cancelled, which could kill performance.
-  }
-
   private fun purgeOldClients(cutoffTime: LocalDateTime) {
     Timber.d { "Attempt to purge old clients before $cutoffTime" }
 
@@ -152,13 +144,12 @@ internal constructor(
   private fun CoroutineScope.watchForOldClients() {
     val scope = this
 
-    jobs.update { j ->
-      j +
-          scope.launch(context = Dispatchers.Default) {
-            Timber.d { "Watch client count and purge old clients" }
-            onTimerElapsed(OLD_CLIENT_TIMER_PERIOD) { purgeOldClients(it) }
-          }
-    }
+    jobs.add(
+        scope.launch(context = Dispatchers.Default) {
+          Timber.d { "Watch client count and purge old clients" }
+          onTimerElapsed(OLD_CLIENT_TIMER_PERIOD) { purgeOldClients(it) }
+        }
+    )
   }
 
   @CheckResult
@@ -178,19 +169,18 @@ internal constructor(
       // the app to break since Broadcast started but Proxy never started
       val startedAt = LocalDateTime.now(clock)
 
-      jobs.update { j ->
-        j +
-            scope.launch(context = Dispatchers.Default) {
-              Timber.d { "Watch client count and shutdown if none" }
-              onTimerElapsed(NO_CLIENTS_TIMER_PERIOD) { cutoff ->
-                if (startedAt >= cutoff) {
-                  Timber.w { "Shutdown check received but client started AFTER cutoff - invalid" }
-                } else {
-                  shutdownWithNoClients()
-                }
+      jobs.add(
+          scope.launch(context = Dispatchers.Default) {
+            Timber.d { "Watch client count and shutdown if none" }
+            onTimerElapsed(NO_CLIENTS_TIMER_PERIOD) { cutoff ->
+              if (startedAt >= cutoff) {
+                Timber.w { "Shutdown check received but client started AFTER cutoff - invalid" }
+              } else {
+                shutdownWithNoClients()
               }
             }
-      }
+          },
+      )
     }
   }
 
@@ -243,22 +233,19 @@ internal constructor(
     return this.toMutableMap().apply { remove(key) }
   }
 
-  private fun CoroutineScope.handleClientUpdate(
+  private fun handleClientUpdate(
       client: TetherClient,
       onClientUpdated: (TetherClient) -> TetherClient,
   ) {
     val key = client.key()
-    val clients =
-        allowedClients.updateAndGet { clients ->
-          val existing = clients[key]
-          if (existing != null) {
-            return@updateAndGet clients.addClient(key, onClientUpdated(existing))
-          } else {
-            return@updateAndGet clients
-          }
-        }
-
-    onClientsUpdated(clients.values)
+    allowedClients.update { clients ->
+      val existing = clients[key]
+      if (existing != null) {
+        return@update clients.addClient(key, onClientUpdated(existing))
+      } else {
+        return@update clients
+      }
+    }
   }
 
   override suspend fun started() =
@@ -288,10 +275,16 @@ internal constructor(
     return checkBlocked(client)
   }
 
-  override suspend fun seen(client: TetherClient) =
-      withContext(context = Dispatchers.Default) {
-        handleClientUpdate(client) { markLastSeenNow(it) }
-      }
+  override fun seen(client: TetherClient) {
+    handleClientUpdate(client) { markLastSeenNow(it) }
+  }
+
+  override fun reportTransfer(
+      client: TetherClient,
+      report: ByteTransferReport,
+  ) {
+    handleClientUpdate(client) { updateTransferReport(it, report) }
+  }
 
   override suspend fun updateNickName(client: TetherClient, nickName: String) =
       withContext(context = Dispatchers.Default) {
@@ -308,17 +301,13 @@ internal constructor(
         handleClientUpdate(client) { editBandwidthLimit(it, limit) }
       }
 
-  override suspend fun reportTransfer(client: TetherClient, report: ByteTransferReport) =
-      withContext(context = Dispatchers.Default) {
-        handleClientUpdate(client) { updateTransferReport(it, report) }
-      }
-
   override fun clear() {
     Timber.d { "Clear client tracker" }
 
     allowedClients.value = emptyMap()
     blockedClients.value = emptyMap()
-    jobs.value = emptySet()
+    jobs.forEach { it.cancel() }
+    jobs.clear()
   }
 
   override fun listenForClients(): Flow<Collection<TetherClient>> {

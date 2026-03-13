@@ -23,9 +23,9 @@ interface AllowedClients {
 
   @CheckResult fun listenForClients(): Flow<Collection<TetherClient>>
 
-  suspend fun seen(client: TetherClient)
+  fun seen(client: TetherClient)
 
-  suspend fun reportTransfer(
+  fun reportTransfer(
       client: TetherClient,
       report: ByteTransferReport,
   )
