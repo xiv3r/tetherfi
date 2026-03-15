@@ -19,7 +19,7 @@ package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks
 import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
-import com.pyamsoft.tetherfi.server.clients.ClientResolver
+import com.pyamsoft.tetherfi.server.clients.TetherClient
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.HandlerFactory
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.dropHandler
@@ -40,7 +40,6 @@ import kotlinx.coroutines.CoroutineScope
 
 internal class Socks4ProxyHandler
 internal constructor(
-    clientResolver: ClientResolver,
     tcpSocketCreator: ChannelCreator,
     serverSocketTimeout: ServerSocketTimeout,
     isDebug: Boolean,
@@ -48,7 +47,6 @@ internal constructor(
 ) :
     SocksProxyHandler<Socks4CommandRequest>(
         scope = scope,
-        clientResolver = clientResolver,
         tcpSocketCreator = tcpSocketCreator,
         serverSocketTimeout = serverSocketTimeout,
         isDebug = isDebug,
@@ -160,7 +158,6 @@ internal constructor(
     fun factory(
         scope: CoroutineScope,
         serverSocketTimeout: ServerSocketTimeout,
-        clientResolver: ClientResolver,
         tcpSocketCreator: ChannelCreator,
         isDebug: Boolean,
     ): HandlerFactory<Unit> {
@@ -168,11 +165,20 @@ internal constructor(
         Socks4ProxyHandler(
             isDebug = isDebug,
             scope = scope,
-            clientResolver = clientResolver,
             tcpSocketCreator = tcpSocketCreator,
             serverSocketTimeout = serverSocketTimeout,
         )
       }
+    }
+
+    fun applyChannelAttributes(
+        channel: Channel,
+        client: TetherClient,
+    ) {
+      SocksProxyHandler.applyChannelAttributes(
+          channel = channel,
+          client = client,
+      )
     }
   }
 }

@@ -20,8 +20,7 @@ import androidx.annotation.CheckResult
 import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
-import com.pyamsoft.tetherfi.server.clients.ClientResolver
-import com.pyamsoft.tetherfi.server.clients.ensure
+import com.pyamsoft.tetherfi.server.clients.TetherClient
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.ProxyHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.RelayHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
@@ -42,13 +41,11 @@ internal abstract class SocksProxyHandler<T : SocksMessage>
 internal constructor(
     scope: CoroutineScope,
     serverSocketTimeout: ServerSocketTimeout,
-    clientResolver: ClientResolver,
     isDebug: Boolean,
     private val tcpSocketCreator: ChannelCreator,
 ) :
     ProxyHandler(
         scope = scope,
-        clientResolver = clientResolver,
         serverSocketTimeout = serverSocketTimeout,
         isDebug = isDebug,
     ) {
@@ -57,7 +54,6 @@ internal constructor(
       RelayHandler.factory(
           isDebug = isDebug,
           scope = scope,
-          clientResolver = clientResolver,
           serverSocketTimeout = serverSocketTimeout,
       )
 
@@ -94,13 +90,13 @@ internal constructor(
     val tag = "${msg.version()}-CONNECT"
     if (dstAddr.isNullOrBlank()) {
       Timber.w { "(${channelId}) DROP: $tag Invalid upstream destination address: $dstAddr" }
-      sendErrorAndClose(ctx, msg)
+      sendFailureAndClose(ctx, msg)
       return
     }
 
     if (dstPort !in VALID_PORT_RANGE) {
       Timber.w { "(${channelId}) DROP: $tag Invalid upstream destination port: $dstPort" }
-      sendErrorAndClose(ctx, msg)
+      sendFailureAndClose(ctx, msg)
       return
     }
 
@@ -108,10 +104,16 @@ internal constructor(
     val remoteClient = serverChannel.remoteAddress().cast<InetSocketAddress>()
     if (remoteClient == null) {
       Timber.w { "($channelId) DROP: $tag remoteClient IP is NULL" }
+      sendFailureAndClose(ctx, msg)
       return
     }
 
-    val client = clientResolver.ensure(remoteClient)
+    val client = getTetherClient(ctx)
+    if (client == null) {
+      Timber.w { "($channelId) DROP: $tag TetherClient is NULL" }
+      sendFailureAndClose(ctx, msg)
+      return
+    }
 
     val connectSocket =
         tcpSocketCreator.connect(
@@ -184,4 +186,18 @@ internal constructor(
   protected abstract fun dropSocksHandlers(pipeline: ChannelPipeline)
 
   protected abstract fun sendFailureAndClose(ctx: ChannelHandlerContext, msg: T)
+
+  companion object {
+
+    @JvmStatic
+    protected fun applyChannelAttributes(
+        channel: Channel,
+        client: TetherClient,
+    ) {
+      ProxyHandler.applyChannelAttributes(
+          channel = channel,
+          client = client,
+      )
+    }
+  }
 }

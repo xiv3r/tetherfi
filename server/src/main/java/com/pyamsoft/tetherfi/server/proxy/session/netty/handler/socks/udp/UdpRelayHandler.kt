@@ -21,7 +21,6 @@ import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.clients.ClientResolver
-import com.pyamsoft.tetherfi.server.clients.TetherClient
 import com.pyamsoft.tetherfi.server.clients.ensure
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.HandlerFactory
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.ProxyHandler
@@ -40,15 +39,14 @@ import kotlinx.coroutines.CoroutineScope
 
 internal class UdpRelayHandler
 private constructor(
-    scope: CoroutineScope,
-    clientResolver: ClientResolver,
-    serverSocketTimeout: ServerSocketTimeout,
     isDebug: Boolean,
+    scope: CoroutineScope,
+    serverSocketTimeout: ServerSocketTimeout,
+    private val clientResolver: ClientResolver,
 ) :
     ProxyHandler(
         isDebug = isDebug,
         scope = scope,
-        clientResolver = clientResolver,
         serverSocketTimeout = serverSocketTimeout,
     ) {
 
@@ -110,7 +108,6 @@ private constructor(
       attr(TAG).set(null)
       attr(TCP_CONTROL_ADDRESS).set(null)
       attr(BACK_TO_CLIENT_ADDRESS).set(null)
-      attr(CLIENT).set(null)
     }
   }
 
@@ -193,10 +190,6 @@ private constructor(
     @JvmStatic
     private val TAG: AttributeKey<String> =
         AttributeKey.newInstance("${UdpRelayHandler::class.simpleName}-ID")
-
-    @JvmStatic
-    private val CLIENT: AttributeKey<TetherClient> =
-        AttributeKey.newInstance("${UdpRelayHandler::class.simpleName}-CLIENT")
 
     @JvmStatic
     private val BACK_TO_CLIENT_ADDRESS: AttributeKey<InetSocketAddress> =

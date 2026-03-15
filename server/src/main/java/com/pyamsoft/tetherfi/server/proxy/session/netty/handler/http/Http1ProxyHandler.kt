@@ -20,8 +20,7 @@ import androidx.annotation.CheckResult
 import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
-import com.pyamsoft.tetherfi.server.clients.ClientResolver
-import com.pyamsoft.tetherfi.server.clients.ensure
+import com.pyamsoft.tetherfi.server.clients.TetherClient
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.HandlerFactory
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.ProxyHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.RelayHandler
@@ -53,14 +52,12 @@ internal class Http1ProxyHandler
 private constructor(
     scope: CoroutineScope,
     serverSocketTimeout: ServerSocketTimeout,
-    clientResolver: ClientResolver,
     isDebug: Boolean,
     private val tcpSocketCreator: ChannelCreator,
 ) :
     ProxyHandler(
         isDebug = isDebug,
         scope = scope,
-        clientResolver = clientResolver,
         serverSocketTimeout = serverSocketTimeout,
     ) {
 
@@ -68,7 +65,6 @@ private constructor(
       RelayHandler.factory(
           isDebug = isDebug,
           scope = scope,
-          clientResolver = clientResolver,
           serverSocketTimeout = serverSocketTimeout,
       )
 
@@ -158,10 +154,16 @@ private constructor(
     val remoteClient = serverChannel.remoteAddress().cast<InetSocketAddress>()
     if (remoteClient == null) {
       Timber.w { "($channelId) DROP: $tag remoteClient IP is NULL" }
+      sendErrorAndClose(ctx, msg)
       return
     }
 
-    val client = clientResolver.ensure(remoteClient)
+    val client = getTetherClient(ctx)
+    if (client == null) {
+      Timber.w { "($channelId) DROP: $tag TetherClient is NULL" }
+      sendErrorAndClose(ctx, msg)
+      return
+    }
 
     val future =
         tcpSocketCreator.connect(
@@ -259,10 +261,16 @@ private constructor(
     val remoteClient = serverChannel.remoteAddress().cast<InetSocketAddress>()
     if (remoteClient == null) {
       Timber.w { "($channelId) DROP: $tag remoteClient IP is NULL" }
+      sendErrorAndClose(ctx, msg)
       return
     }
 
-    val client = clientResolver.ensure(remoteClient)
+    val client = getTetherClient(ctx)
+    if (client == null) {
+      Timber.w { "($channelId) DROP: $tag TetherClient is NULL" }
+      sendErrorAndClose(ctx, msg)
+      return
+    }
 
     val future =
         tcpSocketCreator.connect(
@@ -468,18 +476,26 @@ private constructor(
         isDebug: Boolean,
         scope: CoroutineScope,
         serverSocketTimeout: ServerSocketTimeout,
-        clientResolver: ClientResolver,
         tcpSocketCreator: ChannelCreator,
     ): HandlerFactory<Unit> {
       return {
         Http1ProxyHandler(
             isDebug = isDebug,
             scope = scope,
-            clientResolver = clientResolver,
             tcpSocketCreator = tcpSocketCreator,
             serverSocketTimeout = serverSocketTimeout,
         )
       }
+    }
+
+    fun applyChannelAttributes(
+        channel: Channel,
+        client: TetherClient,
+    ) {
+      ProxyHandler.applyChannelAttributes(
+          channel = channel,
+          client = client,
+      )
     }
   }
 }

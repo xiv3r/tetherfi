@@ -68,10 +68,11 @@ internal constructor(
 
   private val delegatingHandlerFactory =
       ProtocolDelegatingHandler.factory(
+          isDebug = isDebug,
+          allowedClients = allowedClients,
           isHttpEnabled = isHttpEnabled,
           serverSocketTimeout = serverSocketTimeout,
           clientResolver = clientResolver,
-          isDebug = isDebug,
       )
 
   override fun onServerStarted(

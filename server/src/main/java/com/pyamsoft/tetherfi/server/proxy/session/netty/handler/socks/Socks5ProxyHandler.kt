@@ -21,6 +21,7 @@ import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.clients.ClientResolver
+import com.pyamsoft.tetherfi.server.clients.TetherClient
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.HandlerFactory
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.dropHandler
@@ -50,18 +51,17 @@ import kotlinx.coroutines.CoroutineScope
 
 internal class Socks5ProxyHandler
 internal constructor(
+    isDebug: Boolean,
     scope: CoroutineScope,
     serverSocketTimeout: ServerSocketTimeout,
     tcpSocketCreator: ChannelCreator,
     clientResolver: ClientResolver,
-    isDebug: Boolean,
     private val udpSocketCreator: ChannelCreator,
 ) :
     SocksProxyHandler<Socks5CommandRequest>(
         isDebug = isDebug,
         scope = scope,
         serverSocketTimeout = serverSocketTimeout,
-        clientResolver = clientResolver,
         tcpSocketCreator = tcpSocketCreator,
     ) {
 
@@ -89,7 +89,7 @@ internal constructor(
     )
   }
 
-  private fun handleSocks5InitialRequest(ctx: ChannelHandlerContext, msg: Socks5InitialRequest) {
+  private fun handleSocks5InitialRequest(ctx: ChannelHandlerContext) {
     // We do not care about auth
     ctx.writeAndFlush(DefaultSocks5InitialResponse(Socks5AuthMethod.NO_AUTH))
   }
@@ -270,7 +270,7 @@ internal constructor(
       if (msg is Socks5Message) {
         when (msg) {
           is Socks5InitialRequest -> {
-            handleSocks5InitialRequest(ctx, msg)
+            handleSocks5InitialRequest(ctx)
           }
 
           is Socks5CommandRequest -> {
@@ -312,6 +312,16 @@ internal constructor(
             udpSocketCreator = udpSocketCreator,
         )
       }
+    }
+
+    fun applyChannelAttributes(
+        channel: Channel,
+        client: TetherClient,
+    ) {
+      SocksProxyHandler.applyChannelAttributes(
+          channel = channel,
+          client = client,
+      )
     }
   }
 }

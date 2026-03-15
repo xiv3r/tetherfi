@@ -17,9 +17,13 @@
 package com.pyamsoft.tetherfi.server.proxy.session.netty.handler
 
 import androidx.annotation.CheckResult
+import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
+import com.pyamsoft.tetherfi.server.clients.AllowedClients
 import com.pyamsoft.tetherfi.server.clients.ClientResolver
+import com.pyamsoft.tetherfi.server.clients.TetherClient
+import com.pyamsoft.tetherfi.server.clients.ensure
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.http.Http1ProxyHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.Socks4ProxyHandler
@@ -36,7 +40,10 @@ import io.netty.handler.codec.socksx.v5.Socks5InitialRequestDecoder
 import io.netty.handler.codec.socksx.v5.Socks5ServerEncoder
 import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
+import java.net.InetSocketAddress
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 internal class ProtocolDelegatingHandler
 private constructor(
@@ -45,6 +52,7 @@ private constructor(
     private val tcpSocketCreator: ChannelCreator,
     private val isHttpEnabled: Boolean,
     private val serverSocketTimeout: ServerSocketTimeout,
+    private val allowedClients: AllowedClients,
     private val clientResolver: ClientResolver,
     private val scope: CoroutineScope,
     private val isDebug: Boolean,
@@ -54,7 +62,6 @@ private constructor(
       Http1ProxyHandler.factory(
           isDebug = isDebug,
           scope = scope,
-          clientResolver = clientResolver,
           tcpSocketCreator = tcpSocketCreator,
           serverSocketTimeout = serverSocketTimeout,
       )
@@ -63,7 +70,6 @@ private constructor(
       Socks4ProxyHandler.factory(
           isDebug = isDebug,
           scope = scope,
-          clientResolver = clientResolver,
           tcpSocketCreator = tcpSocketCreator,
           serverSocketTimeout = serverSocketTimeout,
       )
@@ -76,6 +82,22 @@ private constructor(
           tcpSocketCreator = tcpSocketCreator,
           serverSocketTimeout = serverSocketTimeout,
       )
+
+  private fun handleClientRequestSideEffects(
+      client: TetherClient,
+  ) {
+    // Mark all client connections as seen
+    //
+    // We need to do this because we have access to the MAC address via the GroupInfo.clientList
+    // but not the IP address. Android does not let us access the system ARP table so we cannot map
+    // MACs to IPs. Thus we need to basically hold our own table of "known" IP addresses and allow
+    // a user to block them as they see fit. This is UX wise, not great at all, since a user must
+    // eliminate a "bad" IP address by first knowing all the good ones.
+    //
+    // Though, arguably, blocking is only a nice to have. Real network security should be handled
+    // via the password.
+    allowedClients.seen(client)
+  }
 
   override fun decode(ctx: ChannelHandlerContext, input: ByteBuf, out: List<Any>) {
     if (!input.isReadable) {
@@ -95,6 +117,16 @@ private constructor(
     val versionVal = input.getByte(readerIndex)
     val socksVersion = SocksVersion.valueOf(versionVal)
 
+    val serverChannel = ctx.channel()
+    val remoteClient = serverChannel.remoteAddress().cast<InetSocketAddress>()
+    if (remoteClient == null) {
+      Timber.w { "DROP: remoteClient IP is NULL" }
+      return
+    }
+
+    val client = clientResolver.ensure(remoteClient)
+    scope.launch(context = Dispatchers.IO) { handleClientRequestSideEffects(client) }
+
     try {
       when (socksVersion) {
         SocksVersion.SOCKS4a -> {
@@ -112,6 +144,11 @@ private constructor(
           pipeline.addLast(Socks4ServerDecoder())
 
           pipeline.addLast(socks4HandlerFactory.create(Unit))
+
+          Socks4ProxyHandler.applyChannelAttributes(
+              channel = serverChannel,
+              client = client,
+          )
         }
 
         SocksVersion.SOCKS5 -> {
@@ -131,6 +168,11 @@ private constructor(
           pipeline.addLast(Socks5CommandRequestDecoder())
 
           pipeline.addLast(socks5HandlerFactory.create(udpControl))
+
+          Socks5ProxyHandler.applyChannelAttributes(
+              channel = serverChannel,
+              client = client,
+          )
         }
 
         else -> {
@@ -148,6 +190,11 @@ private constructor(
 
           // And bind our proxy relay handler
           pipeline.addLast(http1HandlerFactory.create(Unit))
+
+          Http1ProxyHandler.applyChannelAttributes(
+              channel = serverChannel,
+              client = client,
+          )
         }
       }
     } finally {
@@ -171,6 +218,7 @@ private constructor(
     fun factory(
         isHttpEnabled: Boolean,
         serverSocketTimeout: ServerSocketTimeout,
+        allowedClients: AllowedClients,
         clientResolver: ClientResolver,
         isDebug: Boolean,
     ): HandlerFactory<Params> {
@@ -180,6 +228,7 @@ private constructor(
             isHttpEnabled = isHttpEnabled,
             serverSocketTimeout = serverSocketTimeout,
             clientResolver = clientResolver,
+            allowedClients = allowedClients,
             scope = params.scope,
             tcpSocketCreator = params.tcp,
 

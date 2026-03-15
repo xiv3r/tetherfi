@@ -16,19 +16,21 @@
 
 package com.pyamsoft.tetherfi.server.proxy.session.netty.handler
 
+import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
-import com.pyamsoft.tetherfi.server.clients.ClientResolver
+import com.pyamsoft.tetherfi.server.clients.TetherClient
+import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
+import io.netty.util.AttributeKey
 import kotlinx.coroutines.CoroutineScope
 
 internal abstract class ProxyHandler
 internal constructor(
-    protected val clientResolver: ClientResolver,
-    protected val serverSocketTimeout: ServerSocketTimeout,
-    protected val scope: CoroutineScope,
     protected val isDebug: Boolean,
+    protected val scope: CoroutineScope,
+    protected val serverSocketTimeout: ServerSocketTimeout,
 ) : ChannelInboundHandlerAdapter() {
 
   protected var channelId = "CHANNEL-UNKNOWN"
@@ -42,9 +44,16 @@ internal constructor(
     onCloseChannels(ctx)
 
     val channel = ctx.channel()
+    channel.apply { attr(CLIENT).set(null) }
+
     if (channel.isOpen) {
       channel.flushAndClose()
     }
+  }
+
+  @CheckResult
+  protected fun getTetherClient(ctx: ChannelHandlerContext): TetherClient? {
+    return ctx.channel().attr(CLIENT).get()
   }
 
   final override fun channelActive(ctx: ChannelHandlerContext) {
@@ -98,5 +107,17 @@ internal constructor(
   companion object {
 
     @JvmStatic protected val VALID_PORT_RANGE = 1..<65535
+
+    @JvmStatic
+    private val CLIENT: AttributeKey<TetherClient> =
+        AttributeKey.newInstance("${ProxyHandler::class.simpleName}-CLIENT")
+
+    @JvmStatic
+    protected fun applyChannelAttributes(
+        channel: Channel,
+        client: TetherClient,
+    ) {
+      channel.apply { attr(CLIENT).set(client) }
+    }
   }
 }
