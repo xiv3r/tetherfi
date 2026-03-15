@@ -25,6 +25,7 @@ import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
 import io.netty.util.AttributeKey
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.io.IOException
 
 internal abstract class ProxyHandler
 internal constructor(
@@ -33,11 +34,20 @@ internal constructor(
     protected val serverSocketTimeout: ServerSocketTimeout,
 ) : ChannelInboundHandlerAdapter() {
 
-  protected var channelId = "CHANNEL-UNKNOWN"
-    private set
+  @Volatile private var channelId = ""
 
-  protected fun setChannelId(id: String) {
-    channelId = id
+  protected inline fun applyChannelId(block: () -> String) {
+    if (channelId.isBlank()) {
+      channelId = block()
+    }
+  }
+
+  @CheckResult
+  protected fun getChannelId(): String {
+    if (channelId.isBlank()) {
+      channelId = "CHANNEL-UNKNOWN"
+    }
+    return channelId
   }
 
   protected fun closeChannels(ctx: ChannelHandlerContext) {
@@ -67,6 +77,8 @@ internal constructor(
 
   final override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
     try {
+      val channelId = getChannelId()
+
       ctx.handleIdleState(evt) {
         Timber.d { "(${channelId}): Close channel after idle timeout" }
         closeChannels(ctx)
@@ -78,21 +90,34 @@ internal constructor(
 
   final override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
     try {
-      Timber.e(cause) { "($channelId): Exception caught! Close channel" }
-      closeChannels(ctx)
+      val channelId = getChannelId()
+      var log = true
+
+      // We don't care to log connection reset, they happen all the time
+      if (cause is IOException) {
+        if (cause.message == CONNECTION_RESET_MESSAGE) {
+          log = false
+        }
+      }
+
+      if (log) {
+        Timber.e(cause) { "($channelId): Exception caught! Close channel" }
+      }
     } finally {
-      super.exceptionCaught(ctx, cause)
+      closeChannels(ctx)
     }
   }
 
   final override fun channelInactive(ctx: ChannelHandlerContext) {
     try {
+      val channelId = getChannelId()
+
       Timber.d { "($channelId): Inactive! Close channel" }
       closeChannels(ctx)
     } finally {
 
       // Reset channel ID after inactive
-      setChannelId("")
+      channelId = ""
 
       super.channelInactive(ctx)
     }
@@ -105,6 +130,8 @@ internal constructor(
   protected abstract fun sendErrorAndClose(ctx: ChannelHandlerContext, msg: Any)
 
   companion object {
+
+    private const val CONNECTION_RESET_MESSAGE = "Connection reset by peer"
 
     @JvmStatic protected val VALID_PORT_RANGE = 1..<65335
 

@@ -57,7 +57,7 @@ internal constructor(
           serverSocketTimeout = serverSocketTimeout,
       )
 
-  protected fun handleSocksConnectRequest(ctx: ChannelHandlerContext, msg: T) {
+  protected fun handleSocksConnectRequest(ctx: ChannelHandlerContext, channelId: String, msg: T) {
     if (!isConnectMessageType(msg)) {
       sendErrorAndClose(ctx, msg)
       return
@@ -65,16 +65,16 @@ internal constructor(
 
     when (msg) {
       is Socks4CommandRequest -> {
-        performSocksConnectRequest(ctx, msg, msg.dstAddr(), msg.dstPort())
+        performSocksConnectRequest(ctx, channelId, msg, msg.dstAddr(), msg.dstPort())
       }
 
       is Socks5CommandRequest -> {
-        performSocksConnectRequest(ctx, msg, msg.dstAddr(), msg.dstPort())
+        performSocksConnectRequest(ctx, channelId, msg, msg.dstAddr(), msg.dstPort())
       }
 
       else -> {
         Timber.w {
-          "Invalid MSG interface type $msg. Expected Socks4CommandRequest Socks5CommandRequest"
+          "(${channelId}) Invalid MSG interface type $msg. Expected Socks4CommandRequest Socks5CommandRequest"
         }
         sendErrorAndClose(ctx, msg)
       }
@@ -83,6 +83,7 @@ internal constructor(
 
   private fun performSocksConnectRequest(
       ctx: ChannelHandlerContext,
+      channelId: String,
       msg: T,
       dstAddr: String?,
       dstPort: Int,
@@ -159,7 +160,7 @@ internal constructor(
       )
 
       // Tell proxy we've established connection
-      publishConnectSuccess(tag, ctx, msg, outbound)
+      publishConnectSuccess(ctx, tag, channelId, msg, outbound)
 
       // Drop down to raw TCP
       val pipeline = ctx.pipeline()
@@ -177,8 +178,9 @@ internal constructor(
   @CheckResult protected abstract fun isConnectMessageType(msg: T): Boolean
 
   protected abstract fun publishConnectSuccess(
-      tag: String,
       ctx: ChannelHandlerContext,
+      tag: String,
+      channelId: String,
       msg: T,
       outbound: Channel,
   )

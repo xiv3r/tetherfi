@@ -96,6 +96,7 @@ internal constructor(
 
   private fun handleSocksUdpAssociateRequest(
       ctx: ChannelHandlerContext,
+      channelId: String,
       msg: Socks5CommandRequest,
   ) {
     val tag = "${msg.version()}-UDP_ASSOC"
@@ -178,23 +179,27 @@ internal constructor(
     }
   }
 
-  private fun handleSocks5CommandRequest(ctx: ChannelHandlerContext, msg: Socks5CommandRequest) {
+  private fun handleSocks5CommandRequest(
+      ctx: ChannelHandlerContext,
+      channelId: String,
+      msg: Socks5CommandRequest,
+  ) {
     when (val type = msg.type()) {
       Socks5CommandType.CONNECT -> {
-        handleSocksConnectRequest(ctx, msg)
+        handleSocksConnectRequest(ctx, channelId, msg)
       }
 
       Socks5CommandType.UDP_ASSOCIATE -> {
-        handleSocksUdpAssociateRequest(ctx, msg)
+        handleSocksUdpAssociateRequest(ctx, channelId, msg)
       }
 
       Socks5CommandType.BIND -> {
-        Timber.w { "SOCKS5 Bind request received: We do not support BIND currently" }
+        Timber.w { "(${channelId}) SOCKS5 Bind request received: We do not support BIND currently" }
         sendErrorAndClose(ctx, msg)
       }
 
       else -> {
-        Timber.w { "Unknown SOCKS5 command type: $type" }
+        Timber.w { "(${channelId}) Unknown SOCKS5 command type: $type" }
         sendErrorAndClose(ctx, msg)
       }
     }
@@ -214,8 +219,9 @@ internal constructor(
   }
 
   override fun publishConnectSuccess(
-      tag: String,
       ctx: ChannelHandlerContext,
+      tag: String,
+      channelId: String,
       msg: Socks5CommandRequest,
       outbound: Channel,
   ) {
@@ -260,13 +266,19 @@ internal constructor(
     }
   }
 
-  override fun onChannelActive(ctx: ChannelHandlerContext) {
-    val addr = ctx.channel().localAddress()
-    setChannelId("SOCKS5-INBOUND-${addr.address}:${addr.port}")
+  private fun ensureChannelTag(ctx: ChannelHandlerContext) {
+    applyChannelId {
+      val addr = ctx.channel().localAddress()
+      return@applyChannelId "SOCKS5-INBOUND-${addr.address}:${addr.port}"
+    }
   }
 
   override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
     try {
+      ensureChannelTag(ctx)
+
+      val channelId = getChannelId()
+
       if (msg is Socks5Message) {
         when (msg) {
           is Socks5InitialRequest -> {
@@ -274,16 +286,16 @@ internal constructor(
           }
 
           is Socks5CommandRequest -> {
-            handleSocks5CommandRequest(ctx, msg)
+            handleSocks5CommandRequest(ctx, channelId, msg)
           }
 
           else -> {
-            Timber.w { "Unknown SOCKS5 Message: $msg" }
+            Timber.w { "(${channelId}) Unknown SOCKS5 Message: $msg" }
             sendErrorAndClose(ctx, msg)
           }
         }
       } else {
-        Timber.w { "Unknown Message: $msg" }
+        Timber.w { "($channelId) Unknown Message: $msg" }
         super.channelRead(ctx, msg)
       }
     } finally {

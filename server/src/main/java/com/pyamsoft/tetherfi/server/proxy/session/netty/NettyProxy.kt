@@ -94,9 +94,6 @@ protected constructor(
     val bossGroup = MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory())
     val workerGroup = MultiThreadIoEventLoopGroup(NioIoHandler.newFactory())
 
-    Timber.d { "BOSS GROUP $bossGroup ${bossGroup.next()} -> ${bossGroup.next()}" }
-    Timber.d { "WORK GROUP $workerGroup ${workerGroup.next()} -> ${workerGroup.next()}" }
-
     val bootstrap =
         ServerBootstrap()
             .group(bossGroup, workerGroup)

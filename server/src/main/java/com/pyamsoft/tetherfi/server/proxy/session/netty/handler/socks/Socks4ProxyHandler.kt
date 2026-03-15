@@ -59,19 +59,23 @@ internal constructor(
     )
   }
 
-  private fun handleSocks4CommandRequest(ctx: ChannelHandlerContext, msg: Socks4CommandRequest) {
+  private fun handleSocks4CommandRequest(
+      ctx: ChannelHandlerContext,
+      channelId: String,
+      msg: Socks4CommandRequest,
+  ) {
     when (val type = msg.type()) {
       Socks4CommandType.CONNECT -> {
-        handleSocksConnectRequest(ctx, msg)
+        handleSocksConnectRequest(ctx, channelId, msg)
       }
 
       Socks4CommandType.BIND -> {
-        Timber.w { "SOCKS4 Bind request received: We do not support BIND currently" }
+        Timber.w { "($channelId) SOCKS4 Bind request received: We do not support BIND currently" }
         sendErrorAndClose(ctx, msg)
       }
 
       else -> {
-        Timber.w { "Unknown SOCKS4 command type: $type" }
+        Timber.w { "($channelId) Unknown SOCKS4 command type: $type" }
         sendErrorAndClose(ctx, msg)
       }
     }
@@ -86,8 +90,9 @@ internal constructor(
   }
 
   override fun publishConnectSuccess(
-      tag: String,
       ctx: ChannelHandlerContext,
+      tag: String,
+      channelId: String,
       msg: Socks4CommandRequest,
       outbound: Channel,
   ) {
@@ -128,22 +133,27 @@ internal constructor(
     }
   }
 
-  override fun onChannelActive(ctx: ChannelHandlerContext) {
-    val addr = ctx.channel().localAddress()
-    setChannelId("SOCKS4-INBOUND-${addr.address}:${addr.port}")
+  private fun ensureChannelTag(ctx: ChannelHandlerContext) {
+    applyChannelId {
+      val addr = ctx.channel().localAddress()
+      return@applyChannelId "SOCKS4-INBOUND-${addr.address}:${addr.port}"
+    }
   }
 
   override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
     try {
+      ensureChannelTag(ctx)
+      val channelId = getChannelId()
+
       if (msg is Socks4Message) {
         if (msg is Socks4CommandRequest) {
-          handleSocks4CommandRequest(ctx, msg)
+          handleSocks4CommandRequest(ctx, channelId, msg)
         } else {
-          Timber.w { "Unknown SOCKS4 Message: $msg" }
+          Timber.w { "(${channelId}) Unknown SOCKS4 Message: $msg" }
           sendErrorAndClose(ctx, msg)
         }
       } else {
-        Timber.w { "Unknown Message: $msg" }
+        Timber.w { "(${channelId}) Unknown Message: $msg" }
         super.channelRead(ctx, msg)
       }
     } finally {

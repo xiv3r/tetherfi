@@ -50,13 +50,15 @@ private constructor(
     return ctx.channel().attr(TAG).get()
   }
 
-  override fun onChannelActive(ctx: ChannelHandlerContext) {
-    val tag = getChannelTag(ctx)
-    if (tag == null) {
-      val local = ctx.channel().localAddress()
-      setChannelId("RELAY-${local.address}:${local.port}")
-    } else {
-      setChannelId(tag)
+  private fun ensureChannelTag(ctx: ChannelHandlerContext) {
+    applyChannelId {
+      val tag = getChannelTag(ctx)
+      if (tag == null) {
+        val local = ctx.channel().localAddress()
+        return@applyChannelId "RELAY-${local.address}:${local.port}"
+      } else {
+        return@applyChannelId tag
+      }
     }
   }
 
@@ -71,11 +73,16 @@ private constructor(
   }
 
   override fun sendErrorAndClose(ctx: ChannelHandlerContext, msg: Any) {
+    val channelId = getChannelId()
+
     // Can't do as this is a bytes based implementation
     Timber.w { "(${channelId}) Can't send generic error on RelayHandler" }
   }
 
   override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
+    ensureChannelTag(ctx)
+    val channelId = getChannelId()
+
     val writeToChannel = getWritebackChannel(ctx)
     if (writeToChannel == null) {
       Timber.w { "($channelId): channelRead writeToChannel is NULL" }
@@ -101,6 +108,9 @@ private constructor(
 
   override fun channelWritabilityChanged(ctx: ChannelHandlerContext) {
     try {
+      ensureChannelTag(ctx)
+      val channelId = getChannelId()
+
       val writeToChannel = getWritebackChannel(ctx)
       if (writeToChannel == null) {
         Timber.w { "($channelId): channelWritabilityChanged writeToChannel is NULL" }

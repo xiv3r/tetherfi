@@ -75,6 +75,7 @@ private constructor(
 
   private fun unwrapUdpResponse(
       ctx: ChannelHandlerContext,
+      channelId: String,
       msg: DatagramPacket,
   ) {
     UDP.unwrap(
@@ -91,13 +92,15 @@ private constructor(
     )
   }
 
-  override fun onChannelActive(ctx: ChannelHandlerContext) {
-    val id = getChannelTag(ctx)
-    if (id == null) {
-      val local = ctx.channel().localAddress()
-      setChannelId("UDP-RELAY-${local.address}:${local.port}")
-    } else {
-      setChannelId(id)
+  private fun ensureChannelTag(ctx: ChannelHandlerContext) {
+    applyChannelId {
+      val id = getChannelTag(ctx)
+      if (id == null) {
+        val local = ctx.channel().localAddress()
+        return@applyChannelId "UDP-RELAY-${local.address}:${local.port}"
+      }
+
+      return@applyChannelId id
     }
   }
 
@@ -125,6 +128,9 @@ private constructor(
   }
 
   override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
+    ensureChannelTag(ctx)
+    val channelId = getChannelId()
+
     if (msg is DatagramPacket) {
       val serverChannel = ctx.channel()
       val serverAddress = serverChannel.localAddress().cast<InetSocketAddress>()
@@ -167,7 +173,7 @@ private constructor(
 
         // TODO record
 
-        unwrapUdpResponse(ctx, msg)
+        unwrapUdpResponse(ctx, channelId, msg)
       } else {
         val content = msg.retain().content()
         val response = UDP.wrap(alloc = ctx.alloc(), sender = sender, content = content)

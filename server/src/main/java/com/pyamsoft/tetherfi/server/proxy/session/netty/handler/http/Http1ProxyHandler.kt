@@ -125,7 +125,11 @@ private constructor(
     )
   }
 
-  private fun handleHttpsConnect(ctx: ChannelHandlerContext, msg: HttpRequest) {
+  private fun handleHttpsConnect(
+      ctx: ChannelHandlerContext,
+      channelId: String,
+      msg: HttpRequest,
+  ) {
     val tag = "HTTPS-CONNECT"
 
     val parsed = parseUriAndPort(msg.uri(), 443)
@@ -232,7 +236,11 @@ private constructor(
     }
   }
 
-  private fun handleHttpForward(ctx: ChannelHandlerContext, msg: HttpRequest) {
+  private fun handleHttpForward(
+      ctx: ChannelHandlerContext,
+      channelId: String,
+      msg: HttpRequest,
+  ) {
     val tag = "HTTP-FORWARD"
 
     val parsed = parseUriAndPort(msg.uri(), 80)
@@ -334,7 +342,7 @@ private constructor(
       )
 
       // Replay the initial request
-      Timber.d { "Forward connect to $parsed" }
+      Timber.d { "($channelId) Forward connect to $parsed" }
       outbound.writeAndFlush(msg)
 
       // Hold onto this channel for future requests to immediately fire off to it
@@ -370,9 +378,11 @@ private constructor(
     outboundChannel = null
   }
 
-  override fun onChannelActive(ctx: ChannelHandlerContext) {
-    val addr = ctx.channel().localAddress()
-    setChannelId("HTTP-INBOUND-${addr.address}:${addr.port}")
+  private fun ensureChannelTag(ctx: ChannelHandlerContext) {
+    applyChannelId {
+      val addr = ctx.channel().localAddress()
+      return@applyChannelId "HTTP-INBOUND-${addr.address}:${addr.port}"
+    }
   }
 
   override fun sendErrorAndClose(ctx: ChannelHandlerContext, msg: Any) {
@@ -382,16 +392,19 @@ private constructor(
 
   override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
     try {
+      ensureChannelTag(ctx)
+      val channelId = getChannelId()
+
       if (msg is HttpRequest) {
         if (msg.method() == HttpMethod.CONNECT) {
-          handleHttpsConnect(ctx, msg)
+          handleHttpsConnect(ctx, channelId, msg)
         } else {
-          handleHttpForward(ctx, msg)
+          handleHttpForward(ctx, channelId, msg)
         }
       } else if (msg is HttpContent) {
         queueOrDeliverOutboundMessage(msg)
       } else {
-        Timber.w { "MSG was not HTTP based: $msg" }
+        Timber.w { "($channelId) MSG was not HTTP based: $msg" }
         super.channelRead(ctx, msg)
       }
     } finally {

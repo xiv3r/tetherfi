@@ -16,7 +16,6 @@
 
 package com.pyamsoft.tetherfi.server.proxy.session.netty.handler
 
-import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import io.netty.buffer.Unpooled
 import io.netty.channel.Channel
@@ -36,10 +35,7 @@ internal fun ChannelHandlerContext.attachIdleStateHandler(
 ) {
   val self = this
   val timeout = serverSocketTimeout.timeoutDuration
-  if (timeout.isInfinite()) {
-    Timber.d { "Not adding idle timeout, infinite timeout configured!" }
-  } else {
-    Timber.d { "Add idle timeout handler $timeout" }
+  if (!timeout.isInfinite()) {
     self
         .pipeline()
         .addFirst(IdleStateHandler(0, 0, timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS))
