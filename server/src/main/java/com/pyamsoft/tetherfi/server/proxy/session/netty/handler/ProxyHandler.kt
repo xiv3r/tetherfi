@@ -106,7 +106,7 @@ internal constructor(
 
   companion object {
 
-    @JvmStatic protected val VALID_PORT_RANGE = 1..<65535
+    @JvmStatic protected val VALID_PORT_RANGE = 1025..<65000
 
     @JvmStatic
     private val CLIENT: AttributeKey<TetherClient> =
