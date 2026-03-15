@@ -20,6 +20,7 @@ import androidx.annotation.CheckResult
 import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
+import com.pyamsoft.tetherfi.server.clients.AllowedClients
 import com.pyamsoft.tetherfi.server.clients.ClientResolver
 import com.pyamsoft.tetherfi.server.clients.TetherClient
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.HandlerFactory
@@ -53,22 +54,25 @@ internal class Socks5ProxyHandler
 internal constructor(
     isDebug: Boolean,
     scope: CoroutineScope,
-    serverSocketTimeout: ServerSocketTimeout,
-    tcpSocketCreator: ChannelCreator,
     clientResolver: ClientResolver,
+    allowedClients: AllowedClients,
+    tcpSocketCreator: ChannelCreator,
+    serverSocketTimeout: ServerSocketTimeout,
     private val udpSocketCreator: ChannelCreator,
 ) :
     SocksProxyHandler<Socks5CommandRequest>(
         isDebug = isDebug,
         scope = scope,
-        serverSocketTimeout = serverSocketTimeout,
+        allowedClients = allowedClients,
         tcpSocketCreator = tcpSocketCreator,
+        serverSocketTimeout = serverSocketTimeout,
     ) {
 
   private val udpRelayHandlerFactory =
       UdpRelayHandler.factory(
           isDebug = isDebug,
           scope = scope,
+          allowedClients = allowedClients,
           clientResolver = clientResolver,
           serverSocketTimeout = serverSocketTimeout,
       )
@@ -310,18 +314,20 @@ internal constructor(
     fun factory(
         isDebug: Boolean,
         scope: CoroutineScope,
-        serverSocketTimeout: ServerSocketTimeout,
+        allowedClients: AllowedClients,
         clientResolver: ClientResolver,
         tcpSocketCreator: ChannelCreator,
+        serverSocketTimeout: ServerSocketTimeout,
     ): HandlerFactory<ChannelCreator> {
       return { udpSocketCreator ->
         Socks5ProxyHandler(
             isDebug = isDebug,
             scope = scope,
+            allowedClients = allowedClients,
             clientResolver = clientResolver,
             tcpSocketCreator = tcpSocketCreator,
-            serverSocketTimeout = serverSocketTimeout,
             udpSocketCreator = udpSocketCreator,
+            serverSocketTimeout = serverSocketTimeout,
         )
       }
     }

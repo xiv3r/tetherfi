@@ -19,6 +19,8 @@ package com.pyamsoft.tetherfi.server.proxy.session.netty.handler
 import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
+import com.pyamsoft.tetherfi.server.clients.AllowedClients
+import com.pyamsoft.tetherfi.server.clients.ByteTransferReport
 import com.pyamsoft.tetherfi.server.clients.TetherClient
 import io.ktor.util.network.address
 import io.ktor.util.network.port
@@ -26,19 +28,31 @@ import io.netty.buffer.ByteBuf
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import io.netty.util.AttributeKey
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 internal class RelayHandler
 private constructor(
+    isDebug: Boolean,
     scope: CoroutineScope,
     serverSocketTimeout: ServerSocketTimeout,
-    isDebug: Boolean,
+    private val allowedClients: AllowedClients,
 ) :
     ProxyHandler(
         scope = scope,
         serverSocketTimeout = serverSocketTimeout,
         isDebug = isDebug,
     ) {
+
+  // Your single socket read payload isn't THAT LARGE right???
+  @Volatile private var bytesMoved: Int = 0
+
+  private var byteCountJob: Job? = null
 
   @CheckResult
   private fun getWritebackChannel(ctx: ChannelHandlerContext): Channel? {
@@ -67,7 +81,44 @@ private constructor(
     }
   }
 
+  private fun produceByteReport(client: TetherClient, direction: Direction) {
+    val count = bytesMoved
+
+    // Reset back to zero or we keep double counting
+    bytesMoved = 0
+
+    var internetToProxy = 0
+    var proxyToInternet = 0
+    when (direction) {
+      Direction.INBOUND -> internetToProxy = count
+      Direction.OUTBOUND -> proxyToInternet = count
+    }
+
+    allowedClients.reportTransfer(
+        client = client,
+        report =
+            ByteTransferReport(
+                // TODO can we avoid the cast to long
+                internetToProxy = internetToProxy.zeroOrAmountAsLong(),
+                proxyToInternet = proxyToInternet.zeroOrAmountAsLong(),
+            ),
+    )
+  }
+
   override fun onCloseChannels(ctx: ChannelHandlerContext) {
+    // Cancel the report looping job
+    byteCountJob?.cancel()
+    byteCountJob = null
+
+    // One last report before we close
+    val client = getTetherClient(ctx)
+    if (client != null) {
+      val direction = getDirection(ctx)
+      if (direction != null) {
+        produceByteReport(client = client, direction = direction)
+      }
+    }
+
     ctx.flushAndClose()
     getWritebackChannel(ctx)?.flushAndClose()
 
@@ -76,6 +127,34 @@ private constructor(
       attr(WRITE_BACK_CHANNEL).set(null)
       attr(DIRECTION).set(null)
     }
+  }
+
+  override fun onChannelActive(ctx: ChannelHandlerContext) {
+    // Just in case we don't actually have the client or direction yet
+    // resolve in the loop
+    var client = getTetherClient(ctx)
+    var direction = getDirection(ctx)
+
+    byteCountJob?.cancel()
+    byteCountJob =
+        scope.launch(context = Dispatchers.IO) {
+          while (isActive) {
+            // Don't report too often
+            delay(10.seconds)
+
+            if (client == null) {
+              client = getTetherClient(ctx)
+            }
+
+            if (direction == null) {
+              direction = getDirection(ctx)
+            }
+
+            client?.also { c ->
+              direction?.also { d -> produceByteReport(client = c, direction = d) }
+            }
+          }
+        }
   }
 
   override fun sendErrorAndClose(ctx: ChannelHandlerContext, msg: Any) {
@@ -102,14 +181,21 @@ private constructor(
       return
     }
 
+    // TODO bandwidth limit enforcement
+
     if (msg is ByteBuf) {
-      val direction = getDirection(ctx)
-      if (direction != null) {
-        msg.readableBytes().toLong()
-        // TODO Record amount consumed in direction
-        //      Timber.d { "(${hostName}:${port}) Read $byteCount bytes" }
-        // TODO bandwidth limit enforcement
-        // TODO client scope sideeffect mark seen
+      // Grab the amount BEFORE the data buffer is released
+      val amountMoved = msg.readableBytes()
+
+      // Keep count
+      bytesMoved += amountMoved
+    }
+
+    scope.launch(context = Dispatchers.IO) {
+      val client = getTetherClient(ctx)
+
+      if (client != null) {
+        allowedClients.seen(client)
       }
     }
 
@@ -159,12 +245,14 @@ private constructor(
     fun factory(
         isDebug: Boolean,
         scope: CoroutineScope,
+        allowedClients: AllowedClients,
         serverSocketTimeout: ServerSocketTimeout,
     ): HandlerFactory<Unit> {
       return {
         RelayHandler(
             isDebug = isDebug,
             scope = scope,
+            allowedClients = allowedClients,
             serverSocketTimeout = serverSocketTimeout,
         )
       }
@@ -183,7 +271,7 @@ private constructor(
         attr(DIRECTION).set(direction)
       }
 
-      ProxyHandler.applyChannelAttributes(
+      applyChannelAttributes(
           channel = channel,
           client = client,
       )

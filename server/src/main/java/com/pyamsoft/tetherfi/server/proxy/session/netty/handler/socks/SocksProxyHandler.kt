@@ -20,6 +20,7 @@ import androidx.annotation.CheckResult
 import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
+import com.pyamsoft.tetherfi.server.clients.AllowedClients
 import com.pyamsoft.tetherfi.server.clients.TetherClient
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.ProxyHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.RelayHandler
@@ -39,9 +40,10 @@ import kotlinx.coroutines.CoroutineScope
 
 internal abstract class SocksProxyHandler<T : SocksMessage>
 internal constructor(
+    isDebug: Boolean,
     scope: CoroutineScope,
     serverSocketTimeout: ServerSocketTimeout,
-    isDebug: Boolean,
+    allowedClients: AllowedClients,
     private val tcpSocketCreator: ChannelCreator,
 ) :
     ProxyHandler(
@@ -54,6 +56,7 @@ internal constructor(
       RelayHandler.factory(
           isDebug = isDebug,
           scope = scope,
+          allowedClients = allowedClients,
           serverSocketTimeout = serverSocketTimeout,
       )
 

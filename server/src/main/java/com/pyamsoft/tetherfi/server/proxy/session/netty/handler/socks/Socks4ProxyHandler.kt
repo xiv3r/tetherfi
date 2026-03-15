@@ -19,6 +19,7 @@ package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks
 import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
+import com.pyamsoft.tetherfi.server.clients.AllowedClients
 import com.pyamsoft.tetherfi.server.clients.TetherClient
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.HandlerFactory
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
@@ -40,16 +41,18 @@ import kotlinx.coroutines.CoroutineScope
 
 internal class Socks4ProxyHandler
 internal constructor(
-    tcpSocketCreator: ChannelCreator,
-    serverSocketTimeout: ServerSocketTimeout,
     isDebug: Boolean,
     scope: CoroutineScope,
+    allowedClients: AllowedClients,
+    tcpSocketCreator: ChannelCreator,
+    serverSocketTimeout: ServerSocketTimeout,
 ) :
     SocksProxyHandler<Socks4CommandRequest>(
+        isDebug = isDebug,
         scope = scope,
+        allowedClients = allowedClients,
         tcpSocketCreator = tcpSocketCreator,
         serverSocketTimeout = serverSocketTimeout,
-        isDebug = isDebug,
     ) {
 
   @CheckResult
@@ -166,15 +169,17 @@ internal constructor(
     @JvmStatic
     @CheckResult
     fun factory(
-        scope: CoroutineScope,
-        serverSocketTimeout: ServerSocketTimeout,
-        tcpSocketCreator: ChannelCreator,
         isDebug: Boolean,
+        scope: CoroutineScope,
+        allowedClients: AllowedClients,
+        tcpSocketCreator: ChannelCreator,
+        serverSocketTimeout: ServerSocketTimeout,
     ): HandlerFactory<Unit> {
       return {
         Socks4ProxyHandler(
             isDebug = isDebug,
             scope = scope,
+            allowedClients = allowedClients,
             tcpSocketCreator = tcpSocketCreator,
             serverSocketTimeout = serverSocketTimeout,
         )

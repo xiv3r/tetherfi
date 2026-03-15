@@ -16,6 +16,7 @@
 
 package com.pyamsoft.tetherfi.server.proxy.session.netty.handler
 
+import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import io.netty.buffer.Unpooled
 import io.netty.channel.Channel
@@ -76,4 +77,10 @@ internal fun ChannelFuture.flushAndClose() {
 internal fun ChannelHandlerContext.flushAndClose() {
   val self = this
   self.channel().flushAndClose()
+}
+
+@CheckResult
+internal fun Int.zeroOrAmountAsLong(): Long {
+  // TODO can we avoid the cast to long
+  return if (this <= 0) 0L else this.toLong()
 }

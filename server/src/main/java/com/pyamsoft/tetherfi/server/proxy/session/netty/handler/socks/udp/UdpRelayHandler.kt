@@ -20,11 +20,15 @@ import androidx.annotation.CheckResult
 import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
+import com.pyamsoft.tetherfi.server.clients.AllowedClients
+import com.pyamsoft.tetherfi.server.clients.ByteTransferReport
 import com.pyamsoft.tetherfi.server.clients.ClientResolver
+import com.pyamsoft.tetherfi.server.clients.TetherClient
 import com.pyamsoft.tetherfi.server.clients.ensure
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.HandlerFactory
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.ProxyHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.flushAndClose
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.zeroOrAmountAsLong
 import io.ktor.util.network.address
 import io.ktor.util.network.port
 import io.netty.channel.Channel
@@ -35,13 +39,20 @@ import io.netty.handler.codec.socksx.v5.Socks5AddressType
 import io.netty.handler.codec.socksx.v5.Socks5CommandStatus
 import io.netty.util.AttributeKey
 import java.net.InetSocketAddress
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 internal class UdpRelayHandler
 private constructor(
     isDebug: Boolean,
     scope: CoroutineScope,
     serverSocketTimeout: ServerSocketTimeout,
+    private val allowedClients: AllowedClients,
     private val clientResolver: ClientResolver,
 ) :
     ProxyHandler(
@@ -49,6 +60,12 @@ private constructor(
         scope = scope,
         serverSocketTimeout = serverSocketTimeout,
     ) {
+
+  // Your single socket read payload isn't THAT LARGE right???
+  @Volatile private var bytesInbound: Int = 0
+  @Volatile private var bytesOutbound: Int = 0
+
+  private var byteCountJob: Job? = null
 
   @CheckResult
   private fun getBackToClientAddress(ctx: ChannelHandlerContext): InetSocketAddress? {
@@ -86,14 +103,26 @@ private constructor(
         onError = { sendErrorAndClose(ctx, msg) },
         onUnwrapped = { data, destination ->
           val tag = "UDP-RELAY-${destination.address}:${destination.port}"
+
+          // Replace the channel ID here now that we have evaluated the real upstream
           setChannelTag(ctx, tag)
           setChannelId(tag)
 
-          val client = clientResolver.ensure(sender)
-          // TODO Record amount consumed (without header)
-          //      Timber.d { "(${hostName}:${port}) Read $byteCount bytes" }
+          val client = resolveTetherClient(ctx, sender)
+
+          // Grab the amount BEFORE the data buffer is released
+          val amountMoved = data.readableBytes()
+
           // TODO bandwidth limit enforcement
-          // TODO client scope sideeffect mark seen
+
+          // Side effect for client tracking
+          scope.launch(context = Dispatchers.IO) {
+            // Update latest client activity
+            allowedClients.seen(client)
+
+            // This is from Proxy out to Internet
+            bytesOutbound += amountMoved
+          }
 
           val packet = DatagramPacket(data, destination)
           ctx.writeAndFlush(packet).addListener { packet.release() }
@@ -113,7 +142,49 @@ private constructor(
     }
   }
 
+  @CheckResult
+  private fun resolveTetherClient(
+      ctx: ChannelHandlerContext,
+      clientAddress: InetSocketAddress,
+  ): TetherClient =
+      getTetherClient(ctx).let { maybeClient ->
+        if (maybeClient == null) {
+          val newClient = clientResolver.ensure(clientAddress)
+          // And set the TetherClient ATTR so we can yank it back later
+          applyChannelAttributes(channel = ctx.channel(), client = newClient)
+          return@let newClient
+        }
+
+        return@let maybeClient
+      }
+
+  private fun produceByteReport(client: TetherClient) {
+    val inboundCount = bytesInbound
+    val outboundCount = bytesOutbound
+
+    // Reset back to zero or we keep double counting
+    bytesInbound = 0
+    bytesOutbound = 0
+
+    allowedClients.reportTransfer(
+        client = client,
+        report =
+            ByteTransferReport(
+                // TODO can we avoid the cast to long
+                internetToProxy = inboundCount.zeroOrAmountAsLong(),
+                proxyToInternet = outboundCount.zeroOrAmountAsLong(),
+            ),
+    )
+  }
+
   override fun onCloseChannels(ctx: ChannelHandlerContext) {
+    // Cancel the report looping job
+    byteCountJob?.cancel()
+    byteCountJob = null
+
+    // One last report before we close
+    getTetherClient(ctx)?.also { produceByteReport(it) }
+
     ctx.flushAndClose()
 
     ctx.channel().apply {
@@ -121,6 +192,28 @@ private constructor(
       attr(TCP_CONTROL_ADDRESS).set(null)
       attr(BACK_TO_CLIENT_ADDRESS).set(null)
     }
+  }
+
+  override fun onChannelActive(ctx: ChannelHandlerContext) {
+    // Just in case we don't actually have the client or direction yet
+    // resolve in the loop
+    var client = getTetherClient(ctx)
+
+    byteCountJob?.cancel()
+    byteCountJob =
+        scope.launch(context = Dispatchers.IO) {
+          while (isActive) {
+            // Don't report too often
+            delay(10.seconds)
+
+            if (client == null) {
+              // No need to go through the resolver path, just yank the attr if it exists
+              client = getTetherClient(ctx)
+            }
+
+            client?.also { produceByteReport(it) }
+          }
+        }
   }
 
   override fun sendErrorAndClose(ctx: ChannelHandlerContext, msg: Any) {
@@ -185,11 +278,21 @@ private constructor(
 
         val packet = DatagramPacket(response, backToClient)
 
-        val client = clientResolver.ensure(backToClient)
-        // TODO Record amount consumed (without header)
-        //      Timber.d { "(${hostName}:${port}) Read $byteCount bytes" }
+        val client = resolveTetherClient(ctx, backToClient)
+
+        // Grab the amount BEFORE the data buffer is released
+        val amountMoved = response.readableBytes()
+
         // TODO bandwidth limit enforcement
-        // TODO client scope sideeffect mark seen
+
+        // Side effect for client tracking
+        scope.launch(context = Dispatchers.IO) {
+          // Update latest client activity
+          allowedClients.seen(client)
+
+          // This is from Internet back to Proxy
+          bytesInbound = amountMoved
+        }
 
         ctx.writeAndFlush(packet).addListener { msg.release() }
       }
@@ -217,6 +320,7 @@ private constructor(
     fun factory(
         isDebug: Boolean,
         scope: CoroutineScope,
+        allowedClients: AllowedClients,
         clientResolver: ClientResolver,
         serverSocketTimeout: ServerSocketTimeout,
     ): HandlerFactory<Unit> {
@@ -224,6 +328,7 @@ private constructor(
         UdpRelayHandler(
             isDebug = isDebug,
             scope = scope,
+            allowedClients = allowedClients,
             clientResolver = clientResolver,
             serverSocketTimeout = serverSocketTimeout,
         )

@@ -47,21 +47,22 @@ import kotlinx.coroutines.launch
 
 internal class ProtocolDelegatingHandler
 private constructor(
-    // IF this is NULL, SOCKS is not enabled
-    private val udpSocketCreator: ChannelCreator?,
-    private val tcpSocketCreator: ChannelCreator,
+    private val isDebug: Boolean,
+    private val scope: CoroutineScope,
     private val isHttpEnabled: Boolean,
-    private val serverSocketTimeout: ServerSocketTimeout,
     private val allowedClients: AllowedClients,
     private val clientResolver: ClientResolver,
-    private val scope: CoroutineScope,
-    private val isDebug: Boolean,
+    private val serverSocketTimeout: ServerSocketTimeout,
+    private val tcpSocketCreator: ChannelCreator,
+    // IF this is NULL, SOCKS is not enabled
+    private val udpSocketCreator: ChannelCreator?,
 ) : ByteToMessageDecoder() {
 
   private val http1HandlerFactory =
       Http1ProxyHandler.factory(
           isDebug = isDebug,
           scope = scope,
+          allowedClients = allowedClients,
           tcpSocketCreator = tcpSocketCreator,
           serverSocketTimeout = serverSocketTimeout,
       )
@@ -70,6 +71,7 @@ private constructor(
       Socks4ProxyHandler.factory(
           isDebug = isDebug,
           scope = scope,
+          allowedClients = allowedClients,
           tcpSocketCreator = tcpSocketCreator,
           serverSocketTimeout = serverSocketTimeout,
       )
@@ -78,6 +80,7 @@ private constructor(
       Socks5ProxyHandler.factory(
           isDebug = isDebug,
           scope = scope,
+          allowedClients = allowedClients,
           clientResolver = clientResolver,
           tcpSocketCreator = tcpSocketCreator,
           serverSocketTimeout = serverSocketTimeout,

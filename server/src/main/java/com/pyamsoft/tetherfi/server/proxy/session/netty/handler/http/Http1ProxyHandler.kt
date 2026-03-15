@@ -20,6 +20,7 @@ import androidx.annotation.CheckResult
 import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
+import com.pyamsoft.tetherfi.server.clients.AllowedClients
 import com.pyamsoft.tetherfi.server.clients.TetherClient
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.HandlerFactory
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.ProxyHandler
@@ -50,9 +51,10 @@ import kotlinx.coroutines.CoroutineScope
 // Cannot be shareable because of the local state messageQueue and outboundChannel
 internal class Http1ProxyHandler
 private constructor(
+    isDebug: Boolean,
     scope: CoroutineScope,
     serverSocketTimeout: ServerSocketTimeout,
-    isDebug: Boolean,
+    allowedClients: AllowedClients,
     private val tcpSocketCreator: ChannelCreator,
 ) :
     ProxyHandler(
@@ -65,6 +67,7 @@ private constructor(
       RelayHandler.factory(
           isDebug = isDebug,
           scope = scope,
+          allowedClients = allowedClients,
           serverSocketTimeout = serverSocketTimeout,
       )
 
@@ -492,13 +495,15 @@ private constructor(
     fun factory(
         isDebug: Boolean,
         scope: CoroutineScope,
-        serverSocketTimeout: ServerSocketTimeout,
+        allowedClients: AllowedClients,
         tcpSocketCreator: ChannelCreator,
+        serverSocketTimeout: ServerSocketTimeout,
     ): HandlerFactory<Unit> {
       return {
         Http1ProxyHandler(
             isDebug = isDebug,
             scope = scope,
+            allowedClients = allowedClients,
             tcpSocketCreator = tcpSocketCreator,
             serverSocketTimeout = serverSocketTimeout,
         )
