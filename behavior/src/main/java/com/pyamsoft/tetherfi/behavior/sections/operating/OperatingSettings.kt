@@ -66,18 +66,6 @@ internal fun LazyListScope.renderOperatingSettings(
   }
 
   item(
-      contentType = OperatingSettingsContentTypes.NEW_ENGINE,
-  ) {
-    NewEngine(
-        modifier = itemModifier.padding(bottom = MaterialTheme.keylines.content),
-        isEditable = isEditable,
-        appName = appName,
-        serverViewState = serverViewState,
-        onToggleNewEngine = onToggleNewEngine,
-    )
-  }
-
-  item(
       contentType = OperatingSettingsContentTypes.BATTERY_OPTIMIZATION,
   ) {
     BatteryOptimization(
@@ -100,5 +88,17 @@ internal fun LazyListScope.renderOperatingSettings(
           onRequest = onNotificationPermissionRequest,
       )
     }
+  }
+
+  item(
+    contentType = OperatingSettingsContentTypes.NEW_ENGINE,
+  ) {
+    NewEngine(
+      modifier = itemModifier.padding(top = MaterialTheme.keylines.content),
+      isEditable = isEditable,
+      appName = appName,
+      serverViewState = serverViewState,
+      onToggleNewEngine = onToggleNewEngine,
+    )
   }
 }
