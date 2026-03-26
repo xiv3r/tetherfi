@@ -32,6 +32,9 @@ import com.pyamsoft.tetherfi.behavior.sections.expert.renderExpertSettings
 import com.pyamsoft.tetherfi.behavior.sections.operating.renderOperatingSettings
 import com.pyamsoft.tetherfi.behavior.sections.tweaks.renderTweaks
 import com.pyamsoft.tetherfi.ui.LANDSCAPE_MAX_WIDTH
+import com.pyamsoft.tetherfi.ui.ServerViewState
+import com.pyamsoft.tetherfi.ui.test.TestServerState
+import com.pyamsoft.tetherfi.ui.test.makeTestServerState
 import org.jetbrains.annotations.TestOnly
 
 private enum class BehaviorLoadedContentTypes {
@@ -43,7 +46,13 @@ internal fun LazyListScope.renderLoadedContent(
     itemModifier: Modifier = Modifier,
     appName: String,
     state: BehaviorViewState,
+    serverViewState: ServerViewState,
     isEditable: Boolean,
+
+    // Engine
+    // TODO Default in the future
+    // TODO Drop setting in the future as Netty will be the ONLY engine
+    onToggleNewEngine: () -> Unit,
 
     // Battery
     onOpenBatterySettings: () -> Unit,
@@ -68,9 +77,11 @@ internal fun LazyListScope.renderLoadedContent(
       isEditable = isEditable,
       appName = appName,
       state = state,
+      serverViewState = serverViewState,
       showNotificationSettings = showNotificationSettings,
       onDisableBatteryOptimizations = onOpenBatterySettings,
       onNotificationPermissionRequest = onRequestNotificationPermission,
+      onToggleNewEngine = onToggleNewEngine,
   )
 
   item(
@@ -124,6 +135,12 @@ private fun PreviewLoadedContent(
             MutableBehaviorViewState().apply {
               loadingState.value = BehaviorViewState.LoadingState.DONE
             },
+        serverViewState =
+            makeTestServerState(
+                TestServerState.EMPTY,
+                isHttpEnabled = false,
+                isSocksEnabled = false,
+            ),
         appName = "TEST",
         onRequestNotificationPermission = {},
         onOpenBatterySettings = {},
@@ -136,6 +153,7 @@ private fun PreviewLoadedContent(
         onToggleKeepScreenOn = {},
         onToggleIgnoreLocation = {},
         onToggleWakeLock = {},
+        onToggleNewEngine = {},
     )
   }
 }

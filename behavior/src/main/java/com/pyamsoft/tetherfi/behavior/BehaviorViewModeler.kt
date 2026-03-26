@@ -329,6 +329,8 @@ internal constructor(
     expertPreferences.setSocketTimeout(newVal)
   }
 
+  fun handleToggleNewEngine() {}
+
   companion object {
 
     private const val KEY_SHOW_POWER_BALANCE = "key_show_power_balance"

@@ -21,4 +21,9 @@
   <string
     name="operating_always_alive_description"
   >這會讓 %1$s 的網路熱點得以在應用軟體被關閉的情境繼續運行。這會大幅度改進您的使用體驗與網路效能。（建議使用）</string>
+
+  <string name="permission_notification_title">顯示網路熱點通知</string>
+  <string
+      name="permission_notification_description"
+      >在新的 Android 版本中使網路熱點保持存活。\n\n在沒有通知的情境下，網路熱點可能會被系統隨機中止。</string>
 </resources>

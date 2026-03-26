@@ -53,6 +53,11 @@ fun MainScreen(
     pagerState: PagerState,
     allTabs: List<MainView>,
 
+    // Engine
+    // TODO Default in the future
+    // TODO Drop setting in the future as Netty will be the ONLY engine
+    onToggleNewEngine: () -> Unit,
+
     // Settings
     onTabChanged: (MainView) -> Unit,
     onSettingsOpen: () -> Unit,
@@ -129,6 +134,7 @@ fun MainScreen(
           onOpenProxyError = onOpenProxyError,
           onOpenBroadcastError = onOpenBroadcastError,
           onEnableChangeFailed = { setSnackbarError(it) },
+          onToggleNewEngine = onToggleNewEngine,
       )
     }
   }
@@ -172,6 +178,8 @@ private fun PreviewMainScreen(
         override val isShowingHotspotError = MutableStateFlow(false)
         override val isShowingBroadcastError = MutableStateFlow(false)
         override val isShowingProxyError = MutableStateFlow(false)
+
+        override val isNewEngine = MutableStateFlow(true)
       }
   val allTabs = MainView.entries.rememberAsStateList()
 
@@ -194,6 +202,7 @@ private fun PreviewMainScreen(
       onOpenProxyError = {},
       onOpenNetworkError = {},
       onOpenHotspotError = {},
+      onToggleNewEngine = {},
   )
 }
 

@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -434,6 +435,11 @@ internal constructor(
         }
       }
     }
+  }
+
+  fun handleToggleNewEngine() {
+    val newEngine = state.isNewEngine.updateAndGet { !it }
+    proxyPreferences.setNewEngine(newEngine)
   }
 
   companion object {

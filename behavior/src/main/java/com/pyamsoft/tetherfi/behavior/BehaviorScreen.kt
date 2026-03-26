@@ -59,6 +59,11 @@ fun BehaviorScreen(
     state: BehaviorViewState,
     serverViewState: ServerViewState,
 
+    // Engine
+    // TODO Default in the future
+    // TODO Drop setting in the future as Netty will be the ONLY engine
+    onToggleNewEngine: () -> Unit,
+
     // Battery Optimization
     onOpenBatterySettings: () -> Unit,
 
@@ -165,6 +170,7 @@ fun BehaviorScreen(
             itemModifier = Modifier.width(LANDSCAPE_MAX_WIDTH),
             appName = appName,
             state = state,
+            serverViewState = serverViewState,
             isEditable = isEditable,
             showNotificationSettings = showNotificationSettings,
             onOpenBatterySettings = onOpenBatterySettings,
@@ -176,6 +182,7 @@ fun BehaviorScreen(
             onToggleKeepScreenOn = onToggleKeepScreenOn,
             onShowSocketTimeout = onShowSocketTimeout,
             onToggleWakeLock = onToggleWakeLock,
+            onToggleNewEngine = onToggleNewEngine,
         )
       }
     }
@@ -224,6 +231,7 @@ private fun PreviewBehaviorScreen(
       onHideSocketTimeout = {},
       onShowSocketTimeout = {},
       onToggleWakeLock = {},
+      onToggleNewEngine = {},
   )
 }
 

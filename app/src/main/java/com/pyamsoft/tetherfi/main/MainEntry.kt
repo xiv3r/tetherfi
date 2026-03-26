@@ -257,6 +257,7 @@ fun MainEntry(
       onOpenBroadcastError = { viewModel.handleOpenDialog(MainViewDialogs.BROADCAST_ERROR) },
       onOpenProxyError = { viewModel.handleOpenDialog(MainViewDialogs.PROXY_ERROR) },
       onOpenHotspotError = { viewModel.handleOpenDialog(MainViewDialogs.HOTSPOT_ERROR) },
+      onToggleNewEngine = { viewModel.handleToggleNewEngine() },
       onUpdateTile = onUpdateTile,
       onLaunchIntent = onLaunchIntent,
   )

@@ -40,6 +40,7 @@ import com.pyamsoft.tetherfi.ui.dialog.ServerErrorDialog
 import com.pyamsoft.tetherfi.ui.trouble.TroubleshootDialog
 import kotlin.collections.emptySet
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun MainDialogs(
@@ -338,6 +339,8 @@ private fun PreviewMainDialogs(blockers: Collection<HotspotStartBlocker>) {
             override val isShowingHotspotError = MutableStateFlow(false)
             override val isShowingBroadcastError = MutableStateFlow(false)
             override val isShowingProxyError = MutableStateFlow(false)
+
+            override val isNewEngine = MutableStateFlow(true)
           },
       appName = "TEST",
       onDismissBlocker = {},

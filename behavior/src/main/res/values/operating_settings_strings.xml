@@ -16,8 +16,20 @@
   -->
 <resources>
   <string name="operating_settings">Operating Settings</string>
+
   <string name="operating_always_alive_title">Always Alive</string>
   <string
     name="operating_always_alive_description"
   >This will allow the %1$s Hotspot to continue running even if the app is closed.\n\nThis will significantly enhance your experience and network performance.\n(recommended)</string>
+
+  <string name="permission_notification_title"
+      >Show Hotspot Notification</string>
+  <string
+      name="permission_notification_description"
+      >Keep the Hotspot alive on newer Android versions.\n\nWithout a notification, the Hotspot may be stopped randomly.</string>
+
+  <string name="operating_new_engine_title">Use New Engine</string>
+  <string name="operating_new_engine_description">
+    This will make %1$s use a new Netty based proxy engine for handling connections. This new engine is currently a work in progress and is expected to become the only supported engine in future versions. Currently, it is opt-in, but will become the default in the future.
+  </string>
 </resources>

@@ -41,6 +41,11 @@ fun MainContent(
     state: ServerViewState,
     allTabs: List<MainView>,
 
+    // Engine
+    // TODO Default in the future
+    // TODO Drop setting in the future as Netty will be the ONLY engine
+    onToggleNewEngine: () -> Unit,
+
     // Actions
     onShowQRCode: () -> Unit,
     onRefreshConnection: () -> Unit,
@@ -98,6 +103,7 @@ fun MainContent(
             serverViewState = state,
             onRefreshConnection = onRefreshConnection,
             onLaunchIntent = onLaunchIntent,
+            onToggleNewEngine = onToggleNewEngine,
         )
       }
       MainView.STATUS -> {

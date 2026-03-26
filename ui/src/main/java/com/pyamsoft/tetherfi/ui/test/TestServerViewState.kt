@@ -26,6 +26,7 @@ import com.pyamsoft.tetherfi.server.network.PreferredNetwork
 import com.pyamsoft.tetherfi.server.status.RunningStatus
 import com.pyamsoft.tetherfi.ui.ServerViewState
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import org.jetbrains.annotations.TestOnly
 
 @TestOnly
@@ -95,6 +96,8 @@ fun makeTestServerState(
 
             override val wiDiStatus = MutableStateFlow<RunningStatus>(RunningStatus.NotRunning)
             override val proxyStatus = MutableStateFlow<RunningStatus>(RunningStatus.NotRunning)
+
+            override val isNewEngine: StateFlow<Boolean> = MutableStateFlow(true)
           }
       TestServerState.CONNECTED ->
           object : ServerViewState {
@@ -125,6 +128,8 @@ fun makeTestServerState(
 
             override val wiDiStatus = MutableStateFlow<RunningStatus>(RunningStatus.NotRunning)
             override val proxyStatus = MutableStateFlow<RunningStatus>(RunningStatus.NotRunning)
+
+            override val isNewEngine: StateFlow<Boolean> = MutableStateFlow(true)
           }
       TestServerState.ERROR ->
           object : ServerViewState {
@@ -155,5 +160,7 @@ fun makeTestServerState(
 
             override val wiDiStatus = MutableStateFlow<RunningStatus>(RunningStatus.NotRunning)
             override val proxyStatus = MutableStateFlow<RunningStatus>(RunningStatus.NotRunning)
+
+            override val isNewEngine: StateFlow<Boolean> = MutableStateFlow(true)
           }
     }

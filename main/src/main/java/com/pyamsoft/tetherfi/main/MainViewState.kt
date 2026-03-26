@@ -41,6 +41,7 @@ enum class MainViewDialogs {
 
 @Stable
 interface MainViewState : ServerViewState {
+
   // Dialogs
   val isSettingsOpen: StateFlow<Boolean>
   val isShowingQRCodeDialog: StateFlow<Boolean>

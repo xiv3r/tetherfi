@@ -77,7 +77,6 @@ dependencies {
 
   implementation(libs.netty.codec.http)
   implementation(libs.netty.codec.socks)
-  implementation(libs.netty.resolver.dns)
 
   // PYDroid
   implementation(libs.pydroid.bus)

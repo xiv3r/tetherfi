@@ -144,6 +144,11 @@ fun BehaviorEntry(
     lazyListState: LazyListState,
     serverViewState: ServerViewState,
 
+    // Engine
+    // TODO Default in the future
+    // TODO Drop setting in the future as Netty will be the ONLY engine
+    onToggleNewEngine: () -> Unit,
+
     // Actions
     onRefreshConnection: () -> Unit,
     onLaunchIntent: (String) -> Unit,
@@ -193,5 +198,6 @@ fun BehaviorEntry(
       onShowSocketTimeout = { viewModel.handleOpenDialog(BehaviorViewDialogs.SOCKET_TIMEOUT) },
       onUpdateSocketTimeout = { viewModel.handleUpdateSocketTimeout(it) },
       onToggleWakeLock = { viewModel.handleToggleTweak(BehaviorViewTweaks.USE_WAKELOCK) },
+      onToggleNewEngine = onToggleNewEngine,
   )
 }
