@@ -102,11 +102,10 @@ internal constructor(
 
     proxyPreferences.listenForHttpEnabledChanges().also { f ->
       scope.launch(context = Dispatchers.Default) {
-        // Only pull once since after this point, the state will be driven by the input
-        val enabled = f.first()
-
-        // Write immediately to save it to Preferences
-        handleEnabledChanged(enabled = enabled, type = ServerPortTypes.HTTP)
+        // We don't need to do anything with this, we just need to be sure
+        // that some value has loaded.
+        // Actual values are provided by ServerViewState
+        f.first()
 
         config.isHttpEnabled = true
         markPreferencesLoaded(config)
@@ -115,11 +114,10 @@ internal constructor(
 
     proxyPreferences.listenForSocksEnabledChanges().also { f ->
       scope.launch(context = Dispatchers.Default) {
-        // Only pull once since after this point, the state will be driven by the input
-        val enabled = f.first()
-
-        // Write immediately to save it to Preferences
-        handleEnabledChanged(enabled = enabled, type = ServerPortTypes.SOCKS)
+        // We don't need to do anything with this, we just need to be sure
+        // that some value has loaded.
+        // Actual values are provided by ServerViewState
+        f.first()
 
         config.isSocksEnabled = true
         markPreferencesLoaded(config)
@@ -128,12 +126,10 @@ internal constructor(
 
     proxyPreferences.listenForHttpPortChanges().also { f ->
       scope.launch(context = Dispatchers.Default) {
-        // Only pull once since after this point, the state will be driven by the input
-        val p = f.first()
-
-        // Write the port immediately to save it to Preferences
-        val portString = if (p == 0) "" else "$p"
-        handlePortChanged(port = portString, type = ServerPortTypes.HTTP)
+        // We don't need to do anything with this, we just need to be sure
+        // that some value has loaded.
+        // Actual values are provided by ServerViewState
+        f.first()
 
         config.httpPort = true
         markPreferencesLoaded(config)
@@ -142,12 +138,10 @@ internal constructor(
 
     proxyPreferences.listenForSocksPortChanges().also { f ->
       scope.launch(context = Dispatchers.Default) {
-        // Only pull once since after this point, the state will be driven by the input
-        val p = f.first()
-
-        // Write the port immediately to save it to Preferences
-        val portString = if (p == 0) "" else "$p"
-        handlePortChanged(port = portString, type = ServerPortTypes.SOCKS)
+        // We don't need to do anything with this, we just need to be sure
+        // that some value has loaded.
+        // Actual values are provided by ServerViewState
+        f.first()
 
         config.socksPort = true
         markPreferencesLoaded(config)
@@ -226,34 +220,6 @@ internal constructor(
     state.password.value = password
     wifiPreferences.setPassword(password)
   }
-
-  fun handlePortChanged(port: String, type: ServerPortTypes) =
-      when (type) {
-        ServerPortTypes.HTTP -> {
-          state.httpPort.value = port
-          val portValue = port.toIntOrNull()
-          proxyPreferences.setHttpPort(portValue ?: 0)
-        }
-
-        ServerPortTypes.SOCKS -> {
-          state.socksPort.value = port
-          val portValue = port.toIntOrNull()
-          proxyPreferences.setSocksPort(portValue ?: 0)
-        }
-      }
-
-  fun handleEnabledChanged(enabled: Boolean, type: ServerPortTypes) =
-      when (type) {
-        ServerPortTypes.HTTP -> {
-          state.isHttpEnabled.value = enabled
-          proxyPreferences.setHttpEnabled(enabled)
-        }
-
-        ServerPortTypes.SOCKS -> {
-          state.isSocksEnabled.value = enabled
-          proxyPreferences.setSocksEnabled(enabled)
-        }
-      }
 
   fun handleChangeBand(band: ServerNetworkBand) {
     state.band.value = band

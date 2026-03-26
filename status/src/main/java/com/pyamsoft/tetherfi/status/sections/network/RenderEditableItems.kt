@@ -49,14 +49,13 @@ import com.pyamsoft.tetherfi.server.ServerDefaults
 import com.pyamsoft.tetherfi.server.broadcast.BroadcastType
 import com.pyamsoft.tetherfi.status.MutableStatusViewState
 import com.pyamsoft.tetherfi.status.R
-import com.pyamsoft.tetherfi.status.ServerPortTypes
 import com.pyamsoft.tetherfi.status.StatusViewState
 import com.pyamsoft.tetherfi.ui.LANDSCAPE_MAX_WIDTH
+import com.pyamsoft.tetherfi.ui.ServerPortTypes
 import com.pyamsoft.tetherfi.ui.ServerViewState
 import com.pyamsoft.tetherfi.ui.dialog.CardDialog
 import com.pyamsoft.tetherfi.ui.icons.IconPainters
 import com.pyamsoft.tetherfi.ui.test.TEST_PASSWORD
-import com.pyamsoft.tetherfi.ui.test.TEST_PORT
 import com.pyamsoft.tetherfi.ui.test.TEST_SSID
 import com.pyamsoft.tetherfi.ui.test.TestServerState
 import com.pyamsoft.tetherfi.ui.test.makeTestServerState
@@ -78,9 +77,9 @@ internal fun LazyListScope.renderEditableItems(
     onPasswordChanged: (String) -> Unit,
     onTogglePasswordVisibility: () -> Unit,
     onHttpEnabledChanged: (Boolean) -> Unit,
-    onHttpPortChanged: (String) -> Unit,
+    onHttpPortChanged: (Int) -> Unit,
     onSocksEnabledChanged: (Boolean) -> Unit,
-    onSocksPortChanged: (String) -> Unit,
+    onSocksPortChanged: (Int) -> Unit,
     onEnableChangeFailed: (ServerPortTypes) -> Unit,
 ) {
   item(
@@ -163,7 +162,7 @@ internal fun LazyListScope.renderEditableItems(
         ) {
           EditHttpPort(
               modifier = Modifier.weight(1F).padding(end = MaterialTheme.keylines.content),
-              state = state,
+              serverViewState = serverViewState,
               onPortChanged = onHttpPortChanged,
           )
         }
@@ -180,7 +179,7 @@ internal fun LazyListScope.renderEditableItems(
         ) {
           EditSocksPort(
               modifier = Modifier.weight(1F).padding(end = MaterialTheme.keylines.content),
-              state = state,
+              serverViewState = serverViewState,
               onPortChanged = onSocksPortChanged,
           )
         }
@@ -342,7 +341,6 @@ private fun EditProxyPort(
 private fun PreviewEditableItems(
     ssid: String = TEST_SSID,
     password: String = TEST_PASSWORD,
-    port: String = "$TEST_PORT",
     http: Boolean,
     socks: Boolean,
 ) {
@@ -354,7 +352,6 @@ private fun PreviewEditableItems(
             MutableStatusViewState().apply {
               this.ssid.value = ssid
               this.password.value = password
-              this.httpPort.value = port
             },
         onHttpEnabledChanged = {},
         onHttpPortChanged = {},
@@ -375,7 +372,6 @@ private fun PreviewEditableItemsBlankHttp() {
   PreviewEditableItems(
       ssid = "",
       password = "",
-      port = "",
       http = true,
       socks = false,
   )
@@ -386,7 +382,6 @@ private fun PreviewEditableItemsBlankHttp() {
 private fun PreviewEditableItemsOnlySsidHttp() {
   PreviewEditableItems(
       password = "",
-      port = "",
       http = true,
       socks = false,
   )
@@ -397,7 +392,6 @@ private fun PreviewEditableItemsOnlySsidHttp() {
 private fun PreviewEditableItemsOnlyPasswordHttp() {
   PreviewEditableItems(
       ssid = "",
-      port = "",
       http = true,
       socks = false,
   )
@@ -420,7 +414,6 @@ private fun PreviewEditableItemsBlankSocks() {
   PreviewEditableItems(
       ssid = "",
       password = "",
-      port = "",
       http = false,
       socks = true,
   )
@@ -431,7 +424,6 @@ private fun PreviewEditableItemsBlankSocks() {
 private fun PreviewEditableItemsOnlySsidSocks() {
   PreviewEditableItems(
       password = "",
-      port = "",
       http = false,
       socks = true,
   )
@@ -442,7 +434,6 @@ private fun PreviewEditableItemsOnlySsidSocks() {
 private fun PreviewEditableItemsOnlyPasswordSocks() {
   PreviewEditableItems(
       ssid = "",
-      port = "",
       http = false,
       socks = true,
   )
@@ -465,7 +456,6 @@ private fun PreviewEditableItemsBlankBoth() {
   PreviewEditableItems(
       ssid = "",
       password = "",
-      port = "",
       http = true,
       socks = true,
   )
@@ -476,7 +466,6 @@ private fun PreviewEditableItemsBlankBoth() {
 private fun PreviewEditableItemsOnlySsidBoth() {
   PreviewEditableItems(
       password = "",
-      port = "",
       http = true,
       socks = true,
   )
@@ -487,7 +476,6 @@ private fun PreviewEditableItemsOnlySsidBoth() {
 private fun PreviewEditableItemsOnlyPasswordBoth() {
   PreviewEditableItems(
       ssid = "",
-      port = "",
       http = true,
       socks = true,
   )

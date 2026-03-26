@@ -53,6 +53,7 @@ import com.pyamsoft.tetherfi.settings.SettingsDialog
 import com.pyamsoft.tetherfi.status.PermissionRequests
 import com.pyamsoft.tetherfi.status.PermissionResponse
 import com.pyamsoft.tetherfi.ui.LANDSCAPE_MAX_WIDTH
+import com.pyamsoft.tetherfi.ui.ServerPortTypes
 import com.pyamsoft.tetherfi.ui.dialog.SlowSpeedsDialog
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -207,7 +208,9 @@ fun MainEntry(
   val appEnvironment = rememberNotNull(component.appEnvironment)
   val permissionRequestBus = rememberNotNull(component.permissionRequestBus)
   val permissionResponseBus = rememberNotNull(component.permissionResponseBus)
-  val experimentalRuntimeFlags = rememberNotNull(component.experimentalRuntimeFlags)
+
+  // TODO Experimental
+  // val experimentalRuntimeFlags = rememberNotNull(component.experimentalRuntimeFlags)
 
   // Use the LifecycleOwner.CoroutineScope (Activity usually)
   // so that the scope does not die because of navigation events
@@ -243,7 +246,6 @@ fun MainEntry(
       modifier = modifier,
       appName = appName,
       state = viewModel,
-      experimentalRuntimeFlags = experimentalRuntimeFlags,
       pagerState = pagerState,
       allTabs = allTabs,
       onTabChanged = { handleTabSelected(it) },
@@ -258,6 +260,10 @@ fun MainEntry(
       onOpenProxyError = { viewModel.handleOpenDialog(MainViewDialogs.PROXY_ERROR) },
       onOpenHotspotError = { viewModel.handleOpenDialog(MainViewDialogs.HOTSPOT_ERROR) },
       onToggleNewEngine = { viewModel.handleToggleNewEngine() },
+      onHttpEnabledChanged = { viewModel.handleEnabledChanged(it, ServerPortTypes.HTTP) },
+      onSocksEnabledChanged = { viewModel.handleEnabledChanged(it, ServerPortTypes.SOCKS) },
+      onHttpPortChanged = { viewModel.handlePortChanged(it, ServerPortTypes.HTTP) },
+      onSocksPortChanged = { viewModel.handlePortChanged(it, ServerPortTypes.SOCKS) },
       onUpdateTile = onUpdateTile,
       onLaunchIntent = onLaunchIntent,
   )

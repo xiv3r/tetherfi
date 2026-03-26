@@ -25,21 +25,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.pyamsoft.tetherfi.behavior.BehaviorEntry
 import com.pyamsoft.tetherfi.connections.ConnectionEntry
-import com.pyamsoft.tetherfi.core.ExperimentalRuntimeFlags
 import com.pyamsoft.tetherfi.info.InfoEntry
 import com.pyamsoft.tetherfi.server.status.RunningStatus
-import com.pyamsoft.tetherfi.status.ServerPortTypes
 import com.pyamsoft.tetherfi.status.StatusEntry
+import com.pyamsoft.tetherfi.ui.ServerPortTypes
 import com.pyamsoft.tetherfi.ui.ServerViewState
 
 @Composable
 fun MainContent(
     modifier: Modifier = Modifier,
     appName: String,
-    experimentalRuntimeFlags: ExperimentalRuntimeFlags,
     pagerState: PagerState,
     state: ServerViewState,
     allTabs: List<MainView>,
+
+    // Main
+    onHttpEnabledChanged: (Boolean) -> Unit,
+    onHttpPortChanged: (Int) -> Unit,
+    onSocksEnabledChanged: (Boolean) -> Unit,
+    onSocksPortChanged: (Int) -> Unit,
 
     // Engine
     // TODO Default in the future
@@ -87,7 +91,6 @@ fun MainContent(
       MainView.INFO -> {
         InfoEntry(
             modifier = Modifier.fillMaxSize(),
-            experimentalRuntimeFlags = experimentalRuntimeFlags,
             appName = appName,
             lazyListState = infoLazyListState,
             serverViewState = state,
@@ -109,7 +112,6 @@ fun MainContent(
       MainView.STATUS -> {
         StatusEntry(
             modifier = Modifier.fillMaxSize(),
-            experimentalRuntimeFlags = experimentalRuntimeFlags,
             appName = appName,
             lazyListState = statusLazyListState,
             serverViewState = state,
@@ -124,6 +126,10 @@ fun MainContent(
             onOpenProxyError = onOpenProxyError,
             onOpenBroadcastError = onOpenBroadcastError,
             onEnableChangeFailed = onEnableChangeFailed,
+            onHttpEnabledChanged = onHttpEnabledChanged,
+            onHttpPortChanged = onHttpPortChanged,
+            onSocksEnabledChanged = onSocksEnabledChanged,
+            onSocksPortChanged = onSocksPortChanged,
         )
       }
       MainView.CONNECTIONS -> {

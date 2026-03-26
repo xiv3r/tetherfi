@@ -35,6 +35,7 @@ import com.pyamsoft.tetherfi.server.status.RunningStatus
 import com.pyamsoft.tetherfi.service.ServiceLauncher
 import com.pyamsoft.tetherfi.service.prereq.HotspotRequirements
 import com.pyamsoft.tetherfi.service.prereq.HotspotStartBlocker
+import com.pyamsoft.tetherfi.ui.ServerPortTypes
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -102,6 +103,10 @@ internal constructor(
 
     proxyPreferences.listenForSocksPortChanges().also { f ->
       scope.launch(context = Dispatchers.Default) { f.collect { s.socksPort.value = it } }
+    }
+
+    proxyPreferences.listenForNewEngineEnabled().also { f ->
+      scope.launch(context = Dispatchers.Default) { f.collect { s.isNewEngine.value = it } }
     }
 
     // Broadcast type
@@ -441,6 +446,32 @@ internal constructor(
     val newEngine = state.isNewEngine.updateAndGet { !it }
     proxyPreferences.setNewEngine(newEngine)
   }
+
+  fun handlePortChanged(port: Int, type: ServerPortTypes) =
+      when (type) {
+        ServerPortTypes.HTTP -> {
+          state.httpPort.value = port
+          proxyPreferences.setHttpPort(port)
+        }
+
+        ServerPortTypes.SOCKS -> {
+          state.socksPort.value = port
+          proxyPreferences.setSocksPort(port)
+        }
+      }
+
+  fun handleEnabledChanged(enabled: Boolean, type: ServerPortTypes) =
+      when (type) {
+        ServerPortTypes.HTTP -> {
+          state.isHttpEnabled.value = enabled
+          proxyPreferences.setHttpEnabled(enabled)
+        }
+
+        ServerPortTypes.SOCKS -> {
+          state.isSocksEnabled.value = enabled
+          proxyPreferences.setSocksEnabled(enabled)
+        }
+      }
 
   companion object {
 

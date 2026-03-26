@@ -33,14 +33,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.pyamsoft.pydroid.ui.util.rememberAsStateList
-import com.pyamsoft.tetherfi.core.ExperimentalRuntimeFlags
 import com.pyamsoft.tetherfi.server.broadcast.BroadcastNetworkStatus
 import com.pyamsoft.tetherfi.server.broadcast.BroadcastType
 import com.pyamsoft.tetherfi.server.network.PreferredNetwork
 import com.pyamsoft.tetherfi.server.status.RunningStatus
 import com.pyamsoft.tetherfi.service.prereq.HotspotStartBlocker
-import com.pyamsoft.tetherfi.status.ServerPortTypes
-import com.pyamsoft.tetherfi.ui.test.makeTestRuntimeFlags
+import com.pyamsoft.tetherfi.ui.ServerPortTypes
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.jetbrains.annotations.TestOnly
 
@@ -49,9 +47,14 @@ fun MainScreen(
     modifier: Modifier = Modifier,
     appName: String,
     state: MainViewState,
-    experimentalRuntimeFlags: ExperimentalRuntimeFlags,
     pagerState: PagerState,
     allTabs: List<MainView>,
+
+    // Main
+    onHttpEnabledChanged: (Boolean) -> Unit,
+    onHttpPortChanged: (Int) -> Unit,
+    onSocksEnabledChanged: (Boolean) -> Unit,
+    onSocksPortChanged: (Int) -> Unit,
 
     // Engine
     // TODO Default in the future
@@ -117,7 +120,6 @@ fun MainScreen(
                   .heightIn(
                       min = remember(pv) { pv.calculateBottomPadding() },
                   ),
-          experimentalRuntimeFlags = experimentalRuntimeFlags,
           appName = appName,
           pagerState = pagerState,
           state = state,
@@ -133,8 +135,12 @@ fun MainScreen(
           onOpenHotspotError = onOpenHotspotError,
           onOpenProxyError = onOpenProxyError,
           onOpenBroadcastError = onOpenBroadcastError,
-          onEnableChangeFailed = { setSnackbarError(it) },
           onToggleNewEngine = onToggleNewEngine,
+          onHttpEnabledChanged = onHttpEnabledChanged,
+          onHttpPortChanged = onHttpPortChanged,
+          onSocksEnabledChanged = onSocksEnabledChanged,
+          onSocksPortChanged = onSocksPortChanged,
+          onEnableChangeFailed = { setSnackbarError(it) },
       )
     }
   }
@@ -185,7 +191,6 @@ private fun PreviewMainScreen(
 
   MainScreen(
       appName = "TEST",
-      experimentalRuntimeFlags = makeTestRuntimeFlags(),
       state = state,
       pagerState = rememberPagerState { allTabs.size },
       allTabs = allTabs,
@@ -203,6 +208,10 @@ private fun PreviewMainScreen(
       onOpenNetworkError = {},
       onOpenHotspotError = {},
       onToggleNewEngine = {},
+      onHttpPortChanged = {},
+      onSocksPortChanged = {},
+      onHttpEnabledChanged = {},
+      onSocksEnabledChanged = {},
   )
 }
 

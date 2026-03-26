@@ -91,14 +91,14 @@ internal fun LazyListScope.renderOperatingSettings(
   }
 
   item(
-    contentType = OperatingSettingsContentTypes.NEW_ENGINE,
+      contentType = OperatingSettingsContentTypes.NEW_ENGINE,
   ) {
     NewEngine(
-      modifier = itemModifier.padding(top = MaterialTheme.keylines.content),
-      isEditable = isEditable,
-      appName = appName,
-      serverViewState = serverViewState,
-      onToggleNewEngine = onToggleNewEngine,
+        modifier = itemModifier.padding(top = MaterialTheme.keylines.content),
+        isEditable = isEditable,
+        appName = appName,
+        serverViewState = serverViewState,
+        onToggleNewEngine = onToggleNewEngine,
     )
   }
 }

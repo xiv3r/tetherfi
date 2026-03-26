@@ -24,11 +24,6 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-enum class ServerPortTypes {
-  HTTP,
-  SOCKS,
-}
-
 @Stable
 interface StatusViewState : UiViewState {
 
@@ -39,12 +34,6 @@ interface StatusViewState : UiViewState {
   val password: StateFlow<String>
   val isPasswordVisible: StateFlow<Boolean>
   val band: StateFlow<ServerNetworkBand?>
-
-  val isHttpEnabled: StateFlow<Boolean>
-  val httpPort: StateFlow<String>
-
-  val isSocksEnabled: StateFlow<Boolean>
-  val socksPort: StateFlow<String>
 
   @Stable
   @Immutable
@@ -63,10 +52,4 @@ class MutableStatusViewState @Inject internal constructor() : StatusViewState {
   override val password = MutableStateFlow("")
   override val isPasswordVisible = MutableStateFlow(false)
   override val band = MutableStateFlow<ServerNetworkBand?>(null)
-
-  override val isHttpEnabled = MutableStateFlow(false)
-  override val httpPort = MutableStateFlow("")
-
-  override val isSocksEnabled = MutableStateFlow(false)
-  override val socksPort = MutableStateFlow("")
 }

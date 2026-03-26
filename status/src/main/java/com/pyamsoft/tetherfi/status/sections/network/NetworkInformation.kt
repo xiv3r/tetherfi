@@ -33,18 +33,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pyamsoft.pydroid.theme.keylines
 import com.pyamsoft.pydroid.ui.theme.HairlineSize
-import com.pyamsoft.tetherfi.core.ExperimentalRuntimeFlags
 import com.pyamsoft.tetherfi.server.status.RunningStatus
 import com.pyamsoft.tetherfi.status.MutableStatusViewState
-import com.pyamsoft.tetherfi.status.ServerPortTypes
 import com.pyamsoft.tetherfi.status.StatusViewState
 import com.pyamsoft.tetherfi.ui.LANDSCAPE_MAX_WIDTH
+import com.pyamsoft.tetherfi.ui.ServerPortTypes
 import com.pyamsoft.tetherfi.ui.ServerViewState
 import com.pyamsoft.tetherfi.ui.test.TEST_PASSWORD
-import com.pyamsoft.tetherfi.ui.test.TEST_PORT
 import com.pyamsoft.tetherfi.ui.test.TEST_SSID
 import com.pyamsoft.tetherfi.ui.test.TestServerState
-import com.pyamsoft.tetherfi.ui.test.makeTestRuntimeFlags
 import com.pyamsoft.tetherfi.ui.test.makeTestServerState
 import com.pyamsoft.tetherfi.ui.trouble.TroubleshootUnableToStart
 import org.jetbrains.annotations.TestOnly
@@ -56,7 +53,6 @@ private enum class NetworkStatusWidgetsContentTypes {
 internal fun LazyListScope.renderNetworkInformation(
     itemModifier: Modifier = Modifier,
     appName: String,
-    experimentalRuntimeFlags: ExperimentalRuntimeFlags,
 
     // State
     state: StatusViewState,
@@ -72,9 +68,9 @@ internal fun LazyListScope.renderNetworkInformation(
     onPasswordChanged: (String) -> Unit,
     onTogglePasswordVisibility: () -> Unit,
     onHttpEnabledChanged: (Boolean) -> Unit,
-    onHttpPortChanged: (String) -> Unit,
+    onHttpPortChanged: (Int) -> Unit,
     onSocksEnabledChanged: (Boolean) -> Unit,
-    onSocksPortChanged: (String) -> Unit,
+    onSocksPortChanged: (Int) -> Unit,
     onEnableChangeFailed: (ServerPortTypes) -> Unit,
 
     // Connections
@@ -162,7 +158,6 @@ internal fun LazyListScope.renderNetworkInformation(
     renderRunningItems(
         modifier = itemModifier,
         state = state,
-        experimentalRuntimeFlags = experimentalRuntimeFlags,
         serverViewState = serverViewState,
         onTogglePasswordVisibility = onTogglePasswordVisibility,
         onShowQRCode = onShowQRCode,
@@ -180,7 +175,6 @@ internal fun LazyListScope.renderNetworkInformation(
 private fun PreviewNetworkInformation(
     ssid: String = TEST_SSID,
     password: String = TEST_PASSWORD,
-    port: String = "$TEST_PORT",
     server: TestServerState,
     isEditable: Boolean,
     wiDiStatus: RunningStatus,
@@ -191,7 +185,6 @@ private fun PreviewNetworkInformation(
   LazyColumn {
     renderNetworkInformation(
         itemModifier = Modifier.width(LANDSCAPE_MAX_WIDTH),
-        experimentalRuntimeFlags = makeTestRuntimeFlags(),
         wiDiStatus = wiDiStatus,
         proxyStatus = proxyStatus,
         appName = "TEST",
@@ -201,7 +194,6 @@ private fun PreviewNetworkInformation(
             MutableStatusViewState().apply {
               this.ssid.value = ssid
               this.password.value = password
-              this.httpPort.value = port
             },
         onShowNetworkError = {},
         onShowQRCode = {},
@@ -231,7 +223,6 @@ private fun PreviewNetworkInformationBlankHttp() {
       proxyStatus = RunningStatus.NotRunning,
       ssid = "",
       password = "",
-      port = "",
       http = true,
       socks = false,
   )
@@ -246,7 +237,6 @@ private fun PreviewNetworkInformationOnlySsidHttp() {
       wiDiStatus = RunningStatus.NotRunning,
       proxyStatus = RunningStatus.NotRunning,
       password = "",
-      port = "",
       http = true,
       socks = false,
   )
@@ -261,7 +251,6 @@ private fun PreviewNetworkInformationOnlyPasswordHttp() {
       wiDiStatus = RunningStatus.NotRunning,
       proxyStatus = RunningStatus.NotRunning,
       ssid = "",
-      port = "",
       http = true,
       socks = false,
   )
@@ -409,7 +398,6 @@ private fun PreviewNetworkInformationBlankSocks() {
       proxyStatus = RunningStatus.NotRunning,
       ssid = "",
       password = "",
-      port = "",
       http = false,
       socks = true,
   )
@@ -424,7 +412,6 @@ private fun PreviewNetworkInformationOnlySsidSocks() {
       wiDiStatus = RunningStatus.NotRunning,
       proxyStatus = RunningStatus.NotRunning,
       password = "",
-      port = "",
       http = false,
       socks = true,
   )
@@ -439,7 +426,6 @@ private fun PreviewNetworkInformationOnlyPasswordSocks() {
       wiDiStatus = RunningStatus.NotRunning,
       proxyStatus = RunningStatus.NotRunning,
       ssid = "",
-      port = "",
       http = false,
       socks = true,
   )
@@ -587,7 +573,6 @@ private fun PreviewNetworkInformationBlankBoth() {
       proxyStatus = RunningStatus.NotRunning,
       ssid = "",
       password = "",
-      port = "",
       http = true,
       socks = true,
   )
@@ -602,7 +587,6 @@ private fun PreviewNetworkInformationOnlySsidBoth() {
       wiDiStatus = RunningStatus.NotRunning,
       proxyStatus = RunningStatus.NotRunning,
       password = "",
-      port = "",
       http = true,
       socks = true,
   )
@@ -617,7 +601,6 @@ private fun PreviewNetworkInformationOnlyPasswordBoth() {
       wiDiStatus = RunningStatus.NotRunning,
       proxyStatus = RunningStatus.NotRunning,
       ssid = "",
-      port = "",
       http = true,
       socks = true,
   )

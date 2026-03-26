@@ -28,8 +28,8 @@ import com.pyamsoft.pydroid.ui.inject.ComposableInjector
 import com.pyamsoft.pydroid.ui.inject.rememberComposableInjector
 import com.pyamsoft.pydroid.ui.util.rememberNotNull
 import com.pyamsoft.tetherfi.ObjectGraph
-import com.pyamsoft.tetherfi.core.ExperimentalRuntimeFlags
 import com.pyamsoft.tetherfi.server.status.RunningStatus
+import com.pyamsoft.tetherfi.ui.ServerPortTypes
 import com.pyamsoft.tetherfi.ui.ServerViewState
 import javax.inject.Inject
 
@@ -66,7 +66,12 @@ fun StatusEntry(
     appName: String,
     lazyListState: LazyListState,
     serverViewState: ServerViewState,
-    experimentalRuntimeFlags: ExperimentalRuntimeFlags,
+
+    // Main
+    onHttpEnabledChanged: (Boolean) -> Unit,
+    onHttpPortChanged: (Int) -> Unit,
+    onSocksEnabledChanged: (Boolean) -> Unit,
+    onSocksPortChanged: (Int) -> Unit,
 
     // Actions
     onShowQRCode: () -> Unit,
@@ -107,11 +112,14 @@ fun StatusEntry(
       lazyListState = lazyListState,
       serverViewState = serverViewState,
       appName = appName,
-      experimentalRuntimeFlags = experimentalRuntimeFlags,
       onShowQRCode = onShowQRCode,
       onRefreshConnection = onRefreshConnection,
       onJumpToHowTo = onJumpToHowTo,
       onEnableChangeFailed = onEnableChangeFailed,
+      onHttpEnabledChanged = onHttpEnabledChanged,
+      onHttpPortChanged = onHttpPortChanged,
+      onSocksEnabledChanged = onSocksEnabledChanged,
+      onSocksPortChanged = onSocksPortChanged,
       onToggleProxy = {
         viewModel.handleToggleProxy(
             onToggleProxy = handleToggleProxy,
@@ -119,10 +127,6 @@ fun StatusEntry(
       },
       onSsidChanged = { viewModel.handleSsidChanged(it.trim()) },
       onPasswordChanged = { viewModel.handlePasswordChanged(it) },
-      onHttpEnabledChanged = { viewModel.handleEnabledChanged(it, ServerPortTypes.HTTP) },
-      onHttpPortChanged = { viewModel.handlePortChanged(it, ServerPortTypes.HTTP) },
-      onSocksEnabledChanged = { viewModel.handleEnabledChanged(it, ServerPortTypes.SOCKS) },
-      onSocksPortChanged = { viewModel.handlePortChanged(it, ServerPortTypes.SOCKS) },
       onViewSlowSpeedHelp = onShowSlowSpeedHelp,
       onSelectBand = { viewModel.handleChangeBand(it) },
       onStatusUpdated = onUpdateTile,

@@ -406,7 +406,8 @@ internal fun LazyListScope.renderDeviceSetup(
                   val socksPortNumber by serverViewState.socksPort.collectAsStateWithLifecycle()
                   val httpPortNumber by serverViewState.httpPort.collectAsStateWithLifecycle()
                   val isNewEngine by serverViewState.isNewEngine.collectAsStateWithLifecycle()
-                  val portNumber = remember(isNewEngine) { if (isNewEngine) httpPortNumber else socksPortNumber }
+                  val portNumber =
+                      remember(isNewEngine) { if (isNewEngine) httpPortNumber else socksPortNumber }
                   val socksPort = rememberPortNumber(portNumber)
 
                   Text(

@@ -31,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.pyamsoft.pydroid.theme.keylines
-import com.pyamsoft.tetherfi.core.ExperimentalRuntimeFlags
 import com.pyamsoft.tetherfi.server.ServerNetworkBand
 import com.pyamsoft.tetherfi.server.broadcast.BroadcastType
 import com.pyamsoft.tetherfi.server.network.PreferredNetwork
@@ -41,13 +40,12 @@ import com.pyamsoft.tetherfi.status.sections.broadcast.PreferredNetworkSelection
 import com.pyamsoft.tetherfi.status.sections.broadcast.renderBroadcastFrequency
 import com.pyamsoft.tetherfi.status.sections.network.renderNetworkInformation
 import com.pyamsoft.tetherfi.ui.LANDSCAPE_MAX_WIDTH
+import com.pyamsoft.tetherfi.ui.ServerPortTypes
 import com.pyamsoft.tetherfi.ui.ServerViewState
 import com.pyamsoft.tetherfi.ui.renderLinks
 import com.pyamsoft.tetherfi.ui.test.TEST_PASSWORD
-import com.pyamsoft.tetherfi.ui.test.TEST_PORT
 import com.pyamsoft.tetherfi.ui.test.TEST_SSID
 import com.pyamsoft.tetherfi.ui.test.TestServerState
-import com.pyamsoft.tetherfi.ui.test.makeTestRuntimeFlags
 import com.pyamsoft.tetherfi.ui.test.makeTestServerState
 import org.jetbrains.annotations.TestOnly
 
@@ -61,7 +59,6 @@ internal fun LazyListScope.renderLoadedContent(
     itemModifier: Modifier = Modifier,
     appName: String,
     state: StatusViewState,
-    experimentalRuntimeFlags: ExperimentalRuntimeFlags,
     serverViewState: ServerViewState,
     isEditable: Boolean,
 
@@ -73,9 +70,9 @@ internal fun LazyListScope.renderLoadedContent(
     onTogglePasswordVisibility: () -> Unit,
     onSelectBand: (ServerNetworkBand) -> Unit,
     onHttpEnabledChanged: (Boolean) -> Unit,
-    onHttpPortChanged: (String) -> Unit,
+    onHttpPortChanged: (Int) -> Unit,
     onSocksEnabledChanged: (Boolean) -> Unit,
-    onSocksPortChanged: (String) -> Unit,
+    onSocksPortChanged: (Int) -> Unit,
     onEnableChangeFailed: (ServerPortTypes) -> Unit,
 
     // Status button
@@ -98,7 +95,6 @@ internal fun LazyListScope.renderLoadedContent(
       isEditable = isEditable,
       appName = appName,
       state = state,
-      experimentalRuntimeFlags = experimentalRuntimeFlags,
       serverViewState = serverViewState,
       wiDiStatus = wiDiStatus,
       proxyStatus = proxyStatus,
@@ -209,11 +205,9 @@ private fun PreviewLoadedContent(
               loadingState.value = StatusViewState.LoadingState.DONE
               this.ssid.value = TEST_SSID
               this.password.value = TEST_PASSWORD
-              this.httpPort.value = "$TEST_PORT"
               band.value = ServerNetworkBand.LEGACY
             },
         serverViewState = makeTestServerState(state, http, socks),
-        experimentalRuntimeFlags = makeTestRuntimeFlags(),
         appName = "TEST",
         onSelectBand = {},
         onPasswordChanged = {},

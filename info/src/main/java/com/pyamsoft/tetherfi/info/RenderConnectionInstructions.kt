@@ -25,14 +25,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.pyamsoft.pydroid.theme.keylines
-import com.pyamsoft.tetherfi.core.ExperimentalRuntimeFlags
 import com.pyamsoft.tetherfi.info.sections.renderAppSetup
 import com.pyamsoft.tetherfi.info.sections.renderConnectionComplete
 import com.pyamsoft.tetherfi.info.sections.renderDeviceIdentifiers
 import com.pyamsoft.tetherfi.info.sections.renderDeviceSetup
 import com.pyamsoft.tetherfi.ui.ServerViewState
 import com.pyamsoft.tetherfi.ui.test.TestServerState
-import com.pyamsoft.tetherfi.ui.test.makeTestRuntimeFlags
 import com.pyamsoft.tetherfi.ui.test.makeTestServerState
 import org.jetbrains.annotations.TestOnly
 
@@ -43,7 +41,6 @@ private enum class ConnectionInstructionContentTypes {
 internal fun LazyListScope.renderConnectionInstructions(
     itemModifier: Modifier = Modifier,
     appName: String,
-    experimentalRuntimeFlags: ExperimentalRuntimeFlags,
     state: InfoViewState,
     serverViewState: ServerViewState,
     onShowQRCode: () -> Unit,
@@ -129,7 +126,6 @@ private fun PreviewConnectionInstructions(
   LazyColumn {
     renderConnectionInstructions(
         appName = "TEST",
-        experimentalRuntimeFlags = makeTestRuntimeFlags(),
         serverViewState = makeTestServerState(server, http, socks),
         state = state,
         onTogglePasswordVisibility = {},

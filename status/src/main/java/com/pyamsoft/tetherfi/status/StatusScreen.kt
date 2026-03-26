@@ -34,7 +34,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pyamsoft.pydroid.theme.keylines
-import com.pyamsoft.tetherfi.core.ExperimentalRuntimeFlags
 import com.pyamsoft.tetherfi.server.ServerNetworkBand
 import com.pyamsoft.tetherfi.server.broadcast.BroadcastType
 import com.pyamsoft.tetherfi.server.network.PreferredNetwork
@@ -42,13 +41,12 @@ import com.pyamsoft.tetherfi.server.status.RunningStatus
 import com.pyamsoft.tetherfi.ui.LANDSCAPE_MAX_WIDTH
 import com.pyamsoft.tetherfi.ui.LoadingSpinner
 import com.pyamsoft.tetherfi.ui.STATIC_HOTSPOT_ERROR
+import com.pyamsoft.tetherfi.ui.ServerPortTypes
 import com.pyamsoft.tetherfi.ui.ServerViewState
 import com.pyamsoft.tetherfi.ui.renderPYDroidExtras
 import com.pyamsoft.tetherfi.ui.test.TEST_PASSWORD
-import com.pyamsoft.tetherfi.ui.test.TEST_PORT
 import com.pyamsoft.tetherfi.ui.test.TEST_SSID
 import com.pyamsoft.tetherfi.ui.test.TestServerState
-import com.pyamsoft.tetherfi.ui.test.makeTestRuntimeFlags
 import com.pyamsoft.tetherfi.ui.test.makeTestServerState
 import org.jetbrains.annotations.TestOnly
 
@@ -63,7 +61,6 @@ fun StatusScreen(
     appName: String,
     state: StatusViewState,
     lazyListState: LazyListState,
-    experimentalRuntimeFlags: ExperimentalRuntimeFlags,
     serverViewState: ServerViewState,
 
     // Proxy
@@ -76,9 +73,9 @@ fun StatusScreen(
     onTogglePasswordVisibility: () -> Unit,
     onSelectBand: (ServerNetworkBand) -> Unit,
     onHttpEnabledChanged: (Boolean) -> Unit,
-    onHttpPortChanged: (String) -> Unit,
+    onHttpPortChanged: (Int) -> Unit,
     onSocksEnabledChanged: (Boolean) -> Unit,
-    onSocksPortChanged: (String) -> Unit,
+    onSocksPortChanged: (Int) -> Unit,
     onEnableChangeFailed: (ServerPortTypes) -> Unit,
 
     // Status buttons
@@ -199,7 +196,6 @@ fun StatusScreen(
             itemModifier = Modifier.width(LANDSCAPE_MAX_WIDTH),
             appName = appName,
             state = state,
-            experimentalRuntimeFlags = experimentalRuntimeFlags,
             serverViewState = serverViewState,
             isEditable = isEditable,
             wiDiStatus = wiDiStatus,
@@ -233,7 +229,6 @@ private fun PreviewStatusScreen(
     isLoading: Boolean,
     ssid: String = TEST_SSID,
     password: String = TEST_PASSWORD,
-    port: Int = TEST_PORT,
     http: Boolean,
     socks: Boolean,
 ) {
@@ -245,13 +240,11 @@ private fun PreviewStatusScreen(
                 else StatusViewState.LoadingState.DONE
             this.ssid.value = ssid
             this.password.value = password
-            this.httpPort.value = "$port"
             band.value = ServerNetworkBand.LEGACY
           },
       serverViewState = makeTestServerState(TestServerState.EMPTY, http, socks),
       lazyListState = rememberLazyListState(),
       appName = "TEST",
-      experimentalRuntimeFlags = makeTestRuntimeFlags(),
       onStatusUpdated = {},
       onSelectBand = {},
       onPasswordChanged = {},
@@ -323,7 +316,6 @@ private fun PreviewStatusScreenEditingBadPasswordHttp() {
 private fun PreviewStatusScreenEditingBadPort1Http() {
   PreviewStatusScreen(
       isLoading = false,
-      port = 1,
       http = true,
       socks = false,
   )
@@ -334,7 +326,6 @@ private fun PreviewStatusScreenEditingBadPort1Http() {
 private fun PreviewStatusScreenEditingBadPort2Http() {
   PreviewStatusScreen(
       isLoading = false,
-      port = 1_000_000,
       http = true,
       socks = false,
   )
@@ -387,7 +378,6 @@ private fun PreviewStatusScreenEditingBadPasswordSocks() {
 private fun PreviewStatusScreenEditingBadPort1Socks() {
   PreviewStatusScreen(
       isLoading = false,
-      port = 1,
       http = false,
       socks = true,
   )
@@ -398,7 +388,6 @@ private fun PreviewStatusScreenEditingBadPort1Socks() {
 private fun PreviewStatusScreenEditingBadPort2Socks() {
   PreviewStatusScreen(
       isLoading = false,
-      port = 1_000_000,
       http = false,
       socks = true,
   )
@@ -451,7 +440,6 @@ private fun PreviewStatusScreenEditingBadPasswordBoth() {
 private fun PreviewStatusScreenEditingBadPort1Both() {
   PreviewStatusScreen(
       isLoading = false,
-      port = 1,
       http = true,
       socks = true,
   )
@@ -462,7 +450,6 @@ private fun PreviewStatusScreenEditingBadPort1Both() {
 private fun PreviewStatusScreenEditingBadPort2Both() {
   PreviewStatusScreen(
       isLoading = false,
-      port = 1_000_000,
       http = true,
       socks = true,
   )

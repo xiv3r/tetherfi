@@ -72,9 +72,11 @@ fun makeTestRuntimeFlags(): ExperimentalRuntimeFlags {
 @VisibleForTesting
 fun makeTestServerState(
     state: TestServerState,
-    isHttpEnabled: Boolean,
-    isSocksEnabled: Boolean,
+    isHttpEnabled: Boolean = true,
+    isSocksEnabled: Boolean = true,
     broadcastType: BroadcastType? = BroadcastType.WIFI_DIRECT,
+    httpPort: Int = TEST_PORT,
+    socksPort: Int = TEST_PORT + 1,
 ): ServerViewState =
     when (state) {
       TestServerState.EMPTY ->
@@ -83,10 +85,10 @@ fun makeTestServerState(
             override val connection = MutableStateFlow(BroadcastNetworkStatus.ConnectionInfo.Empty)
 
             override val isHttpEnabled = MutableStateFlow(isHttpEnabled)
-            override val httpPort = MutableStateFlow(TEST_PORT)
+            override val httpPort = MutableStateFlow(httpPort)
 
             override val isSocksEnabled = MutableStateFlow(isSocksEnabled)
-            override val socksPort = MutableStateFlow(TEST_PORT + 1)
+            override val socksPort = MutableStateFlow(socksPort)
 
             override val broadcastType = MutableStateFlow(broadcastType)
 

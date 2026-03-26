@@ -31,13 +31,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.pyamsoft.pydroid.theme.keylines
-import com.pyamsoft.tetherfi.core.ExperimentalRuntimeFlags
 import com.pyamsoft.tetherfi.ui.LANDSCAPE_MAX_WIDTH
 import com.pyamsoft.tetherfi.ui.ServerViewState
 import com.pyamsoft.tetherfi.ui.renderLinks
 import com.pyamsoft.tetherfi.ui.renderPYDroidExtras
 import com.pyamsoft.tetherfi.ui.test.TestServerState
-import com.pyamsoft.tetherfi.ui.test.makeTestRuntimeFlags
 import com.pyamsoft.tetherfi.ui.test.makeTestServerState
 import org.jetbrains.annotations.TestOnly
 
@@ -51,7 +49,6 @@ fun InfoScreen(
     modifier: Modifier = Modifier,
     appName: String,
     lazyListState: LazyListState,
-    experimentalRuntimeFlags: ExperimentalRuntimeFlags,
     state: InfoViewState,
     serverViewState: ServerViewState,
     onTogglePasswordVisibility: () -> Unit,
@@ -88,7 +85,6 @@ fun InfoScreen(
         itemModifier = Modifier.widthIn(max = LANDSCAPE_MAX_WIDTH),
         appName = appName,
         state = state,
-        experimentalRuntimeFlags = experimentalRuntimeFlags,
         serverViewState = serverViewState,
         onTogglePasswordVisibility = onTogglePasswordVisibility,
         onShowQRCode = onShowQRCode,
@@ -111,7 +107,6 @@ fun InfoScreen(
 private fun PreviewInfoScreen(http: Boolean, socks: Boolean) {
   InfoScreen(
       appName = "TEST",
-      experimentalRuntimeFlags = makeTestRuntimeFlags(),
       state = MutableInfoViewState(),
       lazyListState = rememberLazyListState(),
       serverViewState = makeTestServerState(TestServerState.EMPTY, http, socks),

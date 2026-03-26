@@ -43,24 +43,30 @@ import com.pyamsoft.tetherfi.server.ServerDefaults
 import com.pyamsoft.tetherfi.status.R
 import com.pyamsoft.tetherfi.status.StatusViewState
 import com.pyamsoft.tetherfi.ui.R as R2
+import com.pyamsoft.tetherfi.ui.ServerViewState
 import com.pyamsoft.tetherfi.ui.icons.IconPainters
 
 @Composable
 private fun EditPort(
     modifier: Modifier = Modifier,
-    port: String,
+    port: Int,
     @StringRes portLabelRes: Int,
-    onPortChanged: (String) -> Unit,
+    onPortChanged: (Int) -> Unit,
 ) {
-  val portNumber = remember(port) { port.toIntOrNull() }
-  val isValid = remember(portNumber) { portNumber != null && portNumber in 1025..65000 }
+  val isValid = remember(port) { port in 1025..65000 }
+  val portString = remember(port) { port.toString() }
 
   StatusEditor(
       modifier = modifier,
       mode = StatusEditorMode.OUTLINED,
       title = stringResource(portLabelRes),
-      value = port,
-      onChange = onPortChanged,
+      value = portString,
+      onChange = { newValue ->
+        val portNumber = newValue.toIntOrNull()
+        if (portNumber != null) {
+          onPortChanged(portNumber)
+        }
+      },
       keyboardOptions =
           KeyboardOptions(
               keyboardType = KeyboardType.Number,
@@ -85,10 +91,10 @@ private fun EditPort(
 @Composable
 internal fun EditHttpPort(
     modifier: Modifier = Modifier,
-    state: StatusViewState,
-    onPortChanged: (String) -> Unit,
+    serverViewState: ServerViewState,
+    onPortChanged: (Int) -> Unit,
 ) {
-  val port by state.httpPort.collectAsStateWithLifecycle()
+  val port by serverViewState.httpPort.collectAsStateWithLifecycle()
   EditPort(
       modifier = modifier,
       port = port,
@@ -100,10 +106,10 @@ internal fun EditHttpPort(
 @Composable
 internal fun EditSocksPort(
     modifier: Modifier = Modifier,
-    state: StatusViewState,
-    onPortChanged: (String) -> Unit,
+    serverViewState: ServerViewState,
+    onPortChanged: (Int) -> Unit,
 ) {
-  val port by state.socksPort.collectAsStateWithLifecycle()
+  val port by serverViewState.socksPort.collectAsStateWithLifecycle()
   EditPort(
       modifier = modifier,
       port = port,

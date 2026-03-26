@@ -44,22 +44,27 @@ internal fun PowerBalance(
 ) {
   val isNewEngine by serverViewState.isNewEngine.collectAsStateWithLifecycle()
 
-  val descriptionId = remember(isNewEngine) {
-    if (isNewEngine) R.string.expert_power_balance_new_description else R.string.expert_power_balance_old_description
-  }
+  val descriptionId =
+      remember(isNewEngine) {
+        if (isNewEngine) R.string.expert_power_balance_new_description
+        else R.string.expert_power_balance_old_description
+      }
 
-  val buttonId = remember(isNewEngine) {
-    if (isNewEngine) R.string.expert_power_balance_new_button else R.string.expert_power_balance_old_button
-  }
+  val buttonId =
+      remember(isNewEngine) {
+        if (isNewEngine) R.string.expert_power_balance_new_button
+        else R.string.expert_power_balance_old_button
+      }
 
-  val isButtonEnabled = remember(isEditable, isNewEngine) {
-    if (isNewEngine) {
-      // Never enabled for new engine
-      return@remember false
-    }
+  val isButtonEnabled =
+      remember(isEditable, isNewEngine) {
+        if (isNewEngine) {
+          // Never enabled for new engine
+          return@remember false
+        }
 
-    return@remember isEditable
-  }
+        return@remember isEditable
+      }
 
   Column(
       modifier = modifier,
