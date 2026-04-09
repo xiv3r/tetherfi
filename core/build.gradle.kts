@@ -67,7 +67,7 @@ dependencies {
   implementation(libs.compose.runtime.annotation)
 
   // Android support library.
-  api(libs.androidx.core.ktx)
+  api(libs.androidx.core)
 
   // Dagger
   api(libs.dagger)
