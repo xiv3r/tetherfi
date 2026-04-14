@@ -24,6 +24,7 @@ import com.pyamsoft.tetherfi.server.clients.AllowedClients
 import com.pyamsoft.tetherfi.server.clients.ClientResolver
 import com.pyamsoft.tetherfi.server.clients.TetherClient
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.HandlerFactory
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.applyBandwidthLimitFor
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.dropHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.flushAndClose
@@ -121,6 +122,12 @@ internal constructor(
 
           if (isDebug) {
             pipeline.addFirst(LoggingHandler(LogLevel.DEBUG))
+          }
+
+          // Bandwidth limiter
+          val client = getTetherClient(ctx)
+          if (client != null) {
+            pipeline.applyBandwidthLimitFor(client)
           }
 
           // Read from the REMOTE and send back to the PROXY

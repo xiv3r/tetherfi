@@ -283,8 +283,6 @@ private constructor(
         // Grab the amount BEFORE the data buffer is released
         val amountMoved = response.readableBytes()
 
-        // TODO bandwidth limit enforcement
-
         // Side effect for client tracking
         scope.launch(context = Dispatchers.IO) {
           // Update latest client activity

@@ -23,7 +23,6 @@ import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.clients.AllowedClients
 import com.pyamsoft.tetherfi.server.clients.ClientResolver
 import com.pyamsoft.tetherfi.server.clients.TetherClient
-import com.pyamsoft.tetherfi.server.clients.ensure
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.http.Http1ProxyHandler
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.Socks4ProxyHandler
@@ -127,7 +126,13 @@ private constructor(
       return
     }
 
-    val client = clientResolver.ensure(remoteClient)
+    val remoteClientIpAddress = remoteClient.address.hostAddress
+    if (remoteClientIpAddress == null) {
+      Timber.w { "DROP: Could not resolve remoteClient.address.hostAddress" }
+      return
+    }
+
+    val client = clientResolver.ensure(remoteClientIpAddress)
     scope.launch(context = Dispatchers.IO) { handleClientRequestSideEffects(client) }
 
     try {
@@ -146,6 +151,10 @@ private constructor(
           pipeline.addLast(Socks4ServerEncoder.INSTANCE)
           pipeline.addLast(Socks4ServerDecoder())
 
+          // Bandwidth limiter
+          pipeline.applyBandwidthLimitFor(client)
+
+          // SOCKS4 Handler
           pipeline.addLast(socks4HandlerFactory.create(Unit))
 
           Socks4ProxyHandler.applyChannelAttributes(
@@ -170,6 +179,10 @@ private constructor(
           pipeline.addLast(Socks5InitialRequestDecoder())
           pipeline.addLast(Socks5CommandRequestDecoder())
 
+          // Bandwidth limiter
+          pipeline.applyBandwidthLimitFor(client)
+
+          // SOCKS5 Handler
           pipeline.addLast(socks5HandlerFactory.create(udpControl))
 
           Socks5ProxyHandler.applyChannelAttributes(
@@ -190,6 +203,9 @@ private constructor(
 
           // Assume HTTP
           pipeline.addLast(HttpServerCodec())
+
+          // Bandwidth limiter
+          pipeline.applyBandwidthLimitFor(client)
 
           // And bind our proxy relay handler
           pipeline.addLast(http1HandlerFactory.create(Unit))

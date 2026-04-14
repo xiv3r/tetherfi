@@ -18,6 +18,7 @@ package com.pyamsoft.tetherfi.server.proxy.session.netty.handler
 
 import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
+import com.pyamsoft.tetherfi.server.clients.TetherClient
 import io.netty.buffer.Unpooled
 import io.netty.channel.Channel
 import io.netty.channel.ChannelFuture
@@ -28,6 +29,7 @@ import io.netty.channel.ChannelPipeline
 import io.netty.handler.timeout.IdleState
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
+import io.netty.handler.traffic.ChannelTrafficShapingHandler
 import java.util.concurrent.TimeUnit
 import kotlin.reflect.KClass
 
@@ -83,4 +85,28 @@ internal fun ChannelHandlerContext.flushAndClose() {
 internal fun Int.zeroOrAmountAsLong(): Long {
   // TODO can we avoid the cast to long
   return if (this <= 0) 0L else this.toLong()
+}
+
+/**
+ * We can apply a bandwidth limit at the delegating socket level
+ *
+ * This way we don't have to actually throttle connections out to the Internet, we can just throttle
+ * connections at the Proxy interaction level
+ */
+internal fun ChannelPipeline.applyBandwidthLimitFor(client: TetherClient) {
+  val self = this
+
+  // Rate Limiting (inline for performance)
+  val bandwidthLimit = client.bandwidthLimit?.bytes ?: 0L
+  val mustEnforceBandwidthLimit = bandwidthLimit > 0
+  if (mustEnforceBandwidthLimit) {
+    self.addLast(
+        ChannelTrafficShapingHandler(
+            // Write limit in bytes/sec
+            bandwidthLimit,
+            // Read limit in bytes/sec
+            bandwidthLimit,
+        ),
+    )
+  }
 }

@@ -181,8 +181,6 @@ private constructor(
       return
     }
 
-    // TODO bandwidth limit enforcement
-
     if (msg is ByteBuf) {
       // Grab the amount BEFORE the data buffer is released
       val amountMoved = msg.readableBytes()
