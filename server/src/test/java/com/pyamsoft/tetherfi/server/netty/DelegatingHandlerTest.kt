@@ -16,6 +16,7 @@
 
 package com.pyamsoft.tetherfi.server.netty
 
+import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.server.HOSTNAME
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.clients.AllowedClients
@@ -24,11 +25,14 @@ import com.pyamsoft.tetherfi.server.clients.ClientResolver
 import com.pyamsoft.tetherfi.server.clients.TetherClient
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.ProtocolDelegatingHandler
+import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.ChannelCreator
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.TcpChannelCreator
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.channel.UdpChannelCreator
 import com.pyamsoft.tetherfi.server.runBlockingWithDelays
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
+import io.netty.channel.Channel
+import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelHandler
 import io.netty.channel.MultiThreadIoEventLoopGroup
 import io.netty.channel.embedded.EmbeddedChannel
@@ -61,13 +65,47 @@ private class TestEmbeddedChannel(
   }
 }
 
-class DelegatingHandlerTest {
+private data class TestChannelCreator(
+    private val impl: ChannelCreator,
+    private val onChannelCreated: (Channel) -> Unit,
+) : ChannelCreator {
 
-  private suspend fun withHandler(
+  override fun bind(onChannelInitialized: (Channel) -> Unit): ChannelFuture =
+      impl.bind { channel ->
+        print("ON BIND: $channel")
+        onChannelCreated(channel)
+        onChannelInitialized(channel)
+      }
+
+  override fun connect(hostName: String, port: Int, onChannelInitialized: (Channel) -> Unit) =
+      impl.connect(
+          hostName = hostName,
+          port = port,
+          onChannelInitialized = { channel ->
+            print("ON CONNECT: $hostName $port $channel")
+            onChannelCreated(channel)
+            onChannelInitialized(channel)
+          },
+      )
+}
+
+object TestSetup {
+
+  @CheckResult
+  private fun ChannelCreator.wrap(onChannelCreated: (Channel) -> Unit): ChannelCreator {
+    return TestChannelCreator(
+        impl = this,
+        onChannelCreated = onChannelCreated,
+    )
+  }
+
+  internal fun withHandler(
       scope: CoroutineScope,
       isHttpEnabled: Boolean,
       isSocksEnabled: Boolean,
-  ): TestEmbeddedChannel {
+      onTcpChannelCreated: (Channel) -> Unit = {},
+      onUdpChannelCreated: (Channel) -> Unit = {},
+  ): EmbeddedChannel {
     val allowed =
         object : AllowedClients {
           override fun listenForClients(): Flow<List<TetherClient>> {
@@ -115,8 +153,8 @@ class DelegatingHandlerTest {
     val params =
         ProtocolDelegatingHandler.Params(
             scope = scope,
-            tcp = tcpSocketCreator,
-            udp = if (isSocksEnabled) udpSocketCreator else null,
+            tcp = tcpSocketCreator.wrap { onTcpChannelCreated(it) },
+            udp = if (isSocksEnabled) udpSocketCreator.wrap { onUdpChannelCreated(it) } else null,
         )
 
     val factory =
@@ -131,13 +169,16 @@ class DelegatingHandlerTest {
     val handler = factory.create(params)
     return TestEmbeddedChannel(handler)
   }
+}
+
+class DelegatingHandlerTest {
 
   @Test
   fun `test Netty server handler does not intercept connections when completely disabled`(): Unit =
       runBlockingWithDelays {
         withLogging {
           val channel =
-              withHandler(
+              TestSetup.withHandler(
                   scope = this,
                   isHttpEnabled = false,
                   isSocksEnabled = false,
@@ -161,7 +202,7 @@ class DelegatingHandlerTest {
   fun `test Netty server intercepts HTTP(S) connections`(): Unit = runBlockingWithDelays {
     withLogging {
       val channel =
-          withHandler(
+          TestSetup.withHandler(
               scope = this,
               isHttpEnabled = true,
               isSocksEnabled = false,
@@ -171,6 +212,10 @@ class DelegatingHandlerTest {
       val buf = Unpooled.buffer()
       buf.writeCharSequence(httpCommand, StandardCharsets.UTF_8)
       channel.writeInbound(buf)
+
+      // This has been read by the handler
+      val readHttp = channel.readInbound<ByteBuf>()
+      assertNull(readHttp)
     }
   }
 
@@ -178,7 +223,7 @@ class DelegatingHandlerTest {
   fun `test Netty server intercepts SOCKS connections`(): Unit = runBlockingWithDelays {
     withLogging {
       val channel =
-          withHandler(
+          TestSetup.withHandler(
               scope = this,
               isHttpEnabled = false,
               isSocksEnabled = true,
