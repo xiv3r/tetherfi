@@ -65,11 +65,11 @@ class DelegatingHandlerTest {
       runBlockingWithDelays {
         withLogging {
           val context =
-            TestSetup.withHandler(
-              isHttpEnabled = false,
-              isSocksEnabled = false,
-              factory = { delegatingHandlerFactory(it) },
-            )
+              TestSetup.withHandler(
+                  isHttpEnabled = false,
+                  isSocksEnabled = false,
+                  factory = { delegatingHandlerFactory(it) },
+              )
           val channel = context.channel
 
           val httpCommand = "CONNECT https://google.com HTTP/1.1"
@@ -98,11 +98,11 @@ class DelegatingHandlerTest {
   fun `test Netty server intercepts HTTP(S) connections`(): Unit = runBlockingWithDelays {
     withLogging {
       val context =
-        TestSetup.withHandler(
-          isHttpEnabled = true,
-          isSocksEnabled = false,
-          factory = { delegatingHandlerFactory(it) },
-        )
+          TestSetup.withHandler(
+              isHttpEnabled = true,
+              isSocksEnabled = false,
+              factory = { delegatingHandlerFactory(it) },
+          )
       val channel = context.channel
 
       val httpCommand = "CONNECT https://google.com HTTP/1.1"
@@ -127,11 +127,11 @@ class DelegatingHandlerTest {
   fun `test Netty server intercepts SOCKS4A connections`(): Unit = runBlockingWithDelays {
     withLogging {
       val context =
-        TestSetup.withHandler(
-          isHttpEnabled = false,
-          isSocksEnabled = true,
-          factory = { delegatingHandlerFactory(it) },
-        )
+          TestSetup.withHandler(
+              isHttpEnabled = false,
+              isSocksEnabled = true,
+              factory = { delegatingHandlerFactory(it) },
+          )
       val channel = context.channel
 
       val buf = Unpooled.wrappedBuffer(byteArrayOf(SocksVersion.SOCKS4a.byteValue()))
@@ -155,11 +155,11 @@ class DelegatingHandlerTest {
   fun `test Netty server intercepts SOCKS5 connections`(): Unit = runBlockingWithDelays {
     withLogging {
       val context =
-        TestSetup.withHandler(
-          isHttpEnabled = false,
-          isSocksEnabled = true,
-          factory = { delegatingHandlerFactory(it) },
-        )
+          TestSetup.withHandler(
+              isHttpEnabled = false,
+              isSocksEnabled = true,
+              factory = { delegatingHandlerFactory(it) },
+          )
       val channel = context.channel
 
       val buf = Unpooled.wrappedBuffer(byteArrayOf(SocksVersion.SOCKS5.byteValue()))

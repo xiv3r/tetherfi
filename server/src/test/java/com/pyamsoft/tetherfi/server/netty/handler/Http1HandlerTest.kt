@@ -55,33 +55,33 @@ class Http1HandlerTest {
     withLogging {
       var tcpConnection: Channel? = null
       val context =
-        TestSetup.withHandler(
-          isHttpEnabled = true,
-          isSocksEnabled = false,
-          onTcpChannelCreated = { tcpConnection = it },
-          factory = { http1HandlerFactory(it) },
-        )
+          TestSetup.withHandler(
+              isHttpEnabled = true,
+              isSocksEnabled = false,
+              onTcpChannelCreated = { tcpConnection = it },
+              factory = { http1HandlerFactory(it) },
+          )
       val channel = context.channel
 
       Http1ProxyHandler.applyChannelAttributes(
-        channel = channel,
-        client = context.resolver.ensure(context.channel.remoteAddress().address),
+          channel = channel,
+          client = context.resolver.ensure(context.channel.remoteAddress().address),
       )
 
       val content = Unpooled.copiedBuffer("OK", Charsets.UTF_8)
       val req =
-        DefaultFullHttpRequest(
-          HttpVersion.HTTP_1_1,
-          HttpMethod.CONNECT,
-          "google.com:443",
-          content,
-        )
-          .apply {
-            headers().apply {
-              set(HttpHeaderNames.HOST, "google.com")
-              set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes())
-            }
-          }
+          DefaultFullHttpRequest(
+                  HttpVersion.HTTP_1_1,
+                  HttpMethod.CONNECT,
+                  "google.com:443",
+                  content,
+              )
+              .apply {
+                headers().apply {
+                  set(HttpHeaderNames.HOST, "google.com")
+                  set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes())
+                }
+              }
 
       channel.apply {
         writeInbound(req)

@@ -55,26 +55,26 @@ class Socks5HandlerTest {
     withLogging {
       var tcpConnection: Channel? = null
       val context =
-        TestSetup.withHandler(
-          isHttpEnabled = true,
-          isSocksEnabled = false,
-          onTcpChannelCreated = { tcpConnection = it },
-          factory = { socks5HandlerFactory(it) },
-        )
+          TestSetup.withHandler(
+              isHttpEnabled = true,
+              isSocksEnabled = false,
+              onTcpChannelCreated = { tcpConnection = it },
+              factory = { socks5HandlerFactory(it) },
+          )
       val channel = context.channel
 
       Socks5ProxyHandler.applyChannelAttributes(
-        channel = channel,
-        client = context.resolver.ensure(context.channel.remoteAddress().address),
+          channel = channel,
+          client = context.resolver.ensure(context.channel.remoteAddress().address),
       )
 
       val req =
-        DefaultSocks5CommandRequest(
-          Socks5CommandType.CONNECT,
-          Socks5AddressType.IPv4,
-          "127.0.0.1",
-          43210,
-        )
+          DefaultSocks5CommandRequest(
+              Socks5CommandType.CONNECT,
+              Socks5AddressType.IPv4,
+              "127.0.0.1",
+              43210,
+          )
 
       channel.apply {
         writeInbound(req)
