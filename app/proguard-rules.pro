@@ -41,3 +41,8 @@
 # https://issuetracker.google.com/issues/336842920
 # https://issuetracker.google.com/issues/346808608
 -keep class androidx.compose.ui.platform.AndroidCompositionLocals_androidKt { *; }
+
+# Netty dynamically includes Log4J
+-dontwarn jdk.jfr.**
+-dontwarn org.apache.log4j.**
+-dontwarn org.apache.logging.log4j.**
