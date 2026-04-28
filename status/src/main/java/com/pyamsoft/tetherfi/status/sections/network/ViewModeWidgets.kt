@@ -70,6 +70,8 @@ internal fun ViewProxy(
   val socksPortNumber by serverViewState.socksPort.collectAsStateWithLifecycle()
   val socksPort = rememberPortNumber(socksPortNumber)
 
+  val isNewEngine by serverViewState.isNewEngine.collectAsStateWithLifecycle()
+
   Column(
       modifier = modifier,
   ) {
@@ -87,29 +89,42 @@ internal fun ViewProxy(
     Row(
         verticalAlignment = Alignment.CenterVertically,
     ) {
-      if (isHttpEnabled) {
+      if (isNewEngine) {
         StatusItem(
+          modifier = Modifier.padding(end = MaterialTheme.keylines.content),
+          title = stringResource(R.string.hotspot_proxy_port),
+          value = httpPort,
+          valueStyle =
+            MaterialTheme.typography.titleLarge.copy(
+              fontWeight = FontWeight.W400,
+              fontFamily = FontFamily.Monospace,
+            ),
+        )
+      } else {
+        if (isHttpEnabled) {
+          StatusItem(
             modifier = Modifier.padding(end = MaterialTheme.keylines.content),
             title = stringResource(R.string.hotspot_proxy_http_port),
             value = httpPort,
             valueStyle =
-                MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.W400,
-                    fontFamily = FontFamily.Monospace,
-                ),
-        )
-      }
+              MaterialTheme.typography.titleLarge.copy(
+                fontWeight = FontWeight.W400,
+                fontFamily = FontFamily.Monospace,
+              ),
+          )
+        }
 
-      if (isSocksEnabled) {
-        StatusItem(
+        if (isSocksEnabled) {
+          StatusItem(
             title = stringResource(R.string.hotspot_proxy_socks_port),
             value = socksPort,
             valueStyle =
-                MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.W400,
-                    fontFamily = FontFamily.Monospace,
-                ),
-        )
+              MaterialTheme.typography.titleLarge.copy(
+                fontWeight = FontWeight.W400,
+                fontFamily = FontFamily.Monospace,
+              ),
+          )
+        }
       }
     }
   }
