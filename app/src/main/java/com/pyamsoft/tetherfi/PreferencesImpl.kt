@@ -526,6 +526,6 @@ internal constructor(private val enforcer: ThreadEnforcer, context: Context) :
     private val SOCKET_TIMEOUT = longPreferencesKey("key_socket_timeout_1")
 
     private val NEW_ENGINE = booleanPreferencesKey("key_new_engine_1")
-    private const val DEFAULT_NEW_ENGINE = false
+    private const val DEFAULT_NEW_ENGINE = true
   }
 }
