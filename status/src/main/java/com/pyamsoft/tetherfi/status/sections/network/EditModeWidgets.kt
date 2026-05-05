@@ -288,7 +288,7 @@ internal fun EditSsid(
                       start = MaterialTheme.keylines.content,
                       end = MaterialTheme.keylines.typography,
                   ),
-              text = remember { ServerDefaults.getWifiSsidPrefix() },
+              text = remember { ServerDefaults.WIFI_SSID_PREFIX },
               style =
                   textStyle.copy(
                       fontFamily = FontFamily.Monospace,

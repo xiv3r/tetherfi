@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:LintIgnoreTooManyFunctions
+
 package com.pyamsoft.tetherfi.status
 
 import androidx.compose.foundation.BorderStroke
@@ -30,6 +32,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.pyamsoft.pydroid.core.LintIgnoreLongMethod
+import com.pyamsoft.pydroid.core.LintIgnoreTooManyFunctions
 import com.pyamsoft.pydroid.theme.keylines
 import com.pyamsoft.tetherfi.server.ServerNetworkBand
 import com.pyamsoft.tetherfi.server.broadcast.BroadcastType
@@ -55,6 +59,7 @@ private enum class StatusLoadedContentTypes {
   PREFERRED_NETWORK,
 }
 
+@LintIgnoreLongMethod
 internal fun LazyListScope.renderLoadedContent(
     itemModifier: Modifier = Modifier,
     appName: String,

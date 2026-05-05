@@ -14,10 +14,13 @@
  * limitations under the License.
  */
 
+@file:LintIgnoreTooManyFunctions
+
 package com.pyamsoft.tetherfi.server.broadcast
 
 import androidx.annotation.CheckResult
 import com.pyamsoft.pydroid.bus.EventBus
+import com.pyamsoft.pydroid.core.LintIgnoreTooManyFunctions
 import com.pyamsoft.pydroid.core.ThreadEnforcer
 import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.pydroid.core.requireNotNull

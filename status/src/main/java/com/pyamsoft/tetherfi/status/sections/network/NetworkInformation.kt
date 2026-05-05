@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:LintIgnoreTooManyFunctions
+
 package com.pyamsoft.tetherfi.status.sections.network
 
 import androidx.compose.animation.AnimatedVisibility
@@ -31,6 +33,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.pyamsoft.pydroid.core.LintIgnoreLongMethod
+import com.pyamsoft.pydroid.core.LintIgnoreTooManyFunctions
 import com.pyamsoft.pydroid.theme.keylines
 import com.pyamsoft.pydroid.ui.theme.HairlineSize
 import com.pyamsoft.tetherfi.server.status.RunningStatus
@@ -50,6 +54,7 @@ private enum class NetworkStatusWidgetsContentTypes {
   NETWORK_ERROR,
 }
 
+@LintIgnoreLongMethod
 internal fun LazyListScope.renderNetworkInformation(
     itemModifier: Modifier = Modifier,
     appName: String,

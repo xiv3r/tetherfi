@@ -17,6 +17,7 @@
 package com.pyamsoft.tetherfi.server.proxy.session.tcp
 
 import androidx.annotation.CheckResult
+import com.pyamsoft.pydroid.core.LintIgnoreTooGenericExceptionCaught
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.ByteWriteChannel
 import io.ktor.utils.io.InternalAPI
@@ -32,6 +33,7 @@ const val BUFFER_SIZE = 4096L
  */
 @CheckResult
 @OptIn(InternalAPI::class)
+@LintIgnoreTooGenericExceptionCaught
 internal suspend inline fun ByteReadChannel.copyToWithActionBeforeWrite(
     dst: ByteWriteChannel,
     limit: Long,

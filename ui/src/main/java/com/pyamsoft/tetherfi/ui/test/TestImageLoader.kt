@@ -59,6 +59,7 @@ private class TestImageLoader(context: Context) : ImageLoader {
               )
             }
 
+        @Suppress("detekt:EmptyFunctionBlock")
         override fun dispose() {}
       }
 
@@ -90,7 +91,9 @@ private class TestImageLoader(context: Context) : ImageLoader {
     return ImageLoader.Builder(context)
   }
 
-  override fun shutdown() {}
+  @Suppress("detekt:EmptyFunctionBlock")
+  override fun shutdown() {
+  }
 }
 
 /** Only use for tests/previews */

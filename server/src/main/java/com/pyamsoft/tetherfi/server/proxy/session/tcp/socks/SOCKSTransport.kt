@@ -16,6 +16,7 @@
 
 package com.pyamsoft.tetherfi.server.proxy.session.tcp.socks
 
+import com.pyamsoft.pydroid.core.LintIgnoreTooGenericExceptionCaught
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.SocketCreator
 import com.pyamsoft.tetherfi.server.broadcast.BroadcastNetworkStatus
@@ -74,6 +75,7 @@ internal constructor(
         }
       }
 
+  @LintIgnoreTooGenericExceptionCaught
   override suspend fun parseRequest(
       input: ByteReadChannel,
       output: ByteWriteChannel,

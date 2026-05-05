@@ -93,15 +93,15 @@ internal constructor(
     }
   }
 
-  private suspend fun handleDiscoveryChangedAction(intent: Intent) {
+  private suspend fun handleDiscoveryChangedAction() {
     eventBus.emit(WidiNetworkEvent.DiscoveryChanged)
   }
 
-  private suspend fun handlePeersChangedAction(intent: Intent) {
+  private suspend fun handlePeersChangedAction() {
     eventBus.emit(WidiNetworkEvent.PeersChanged)
   }
 
-  private suspend fun handleThisDeviceChangedAction(intent: Intent) {
+  private suspend fun handleThisDeviceChangedAction() {
     eventBus.emit(WidiNetworkEvent.ThisDeviceChanged)
   }
 
@@ -168,10 +168,9 @@ internal constructor(
         when (val action = intent.action) {
           WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> handleStateChangedAction(intent)
           WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> handleConnectionChangedAction(intent)
-          WifiP2pManager.WIFI_P2P_DISCOVERY_CHANGED_ACTION -> handleDiscoveryChangedAction(intent)
-          WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> handlePeersChangedAction(intent)
-          WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION ->
-              handleThisDeviceChangedAction(intent)
+          WifiP2pManager.WIFI_P2P_DISCOVERY_CHANGED_ACTION -> handleDiscoveryChangedAction()
+          WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> handlePeersChangedAction()
+          WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> handleThisDeviceChangedAction()
           else -> {
             Timber.w { "Unhandled intent action: $action" }
           }

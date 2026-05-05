@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
+@file:LintIgnoreTooManyFunctions
+
 package com.pyamsoft.tetherfi.server.proxy
 
 import androidx.annotation.CheckResult
 import com.pyamsoft.pydroid.bus.EventBus
+import com.pyamsoft.pydroid.core.LintIgnoreTooGenericExceptionCaught
+import com.pyamsoft.pydroid.core.LintIgnoreTooManyFunctions
 import com.pyamsoft.pydroid.core.ThreadEnforcer
 import com.pyamsoft.pydroid.util.ifNotCancellation
 import com.pyamsoft.tetherfi.core.AppDevEnvironment
@@ -107,6 +111,8 @@ internal constructor(
     shutdownProxyServerWithCause(e)
   }
 
+  // TODO move when supported on Expression
+  @LintIgnoreTooGenericExceptionCaught
   private suspend fun beginProxyLoop(
       type: SharedProxy.Type,
       lock: Locker.Lock,

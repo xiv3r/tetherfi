@@ -23,6 +23,7 @@ import java.net.InetAddress
 private const val ZERO_BYTE: Byte = 0
 
 @CheckResult
+@Suppress("detekt:MagicNumber")
 internal fun InetAddress.isSOCKS4A(): Boolean {
   if (this is Inet4Address) {
     val a = this.address

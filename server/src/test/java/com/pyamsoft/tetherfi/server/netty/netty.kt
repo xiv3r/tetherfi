@@ -17,6 +17,7 @@
 package com.pyamsoft.tetherfi.server.netty
 
 import androidx.annotation.CheckResult
+import com.pyamsoft.pydroid.core.LintIgnoreLongMethod
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
 import com.pyamsoft.tetherfi.server.clients.AllowedClients
 import com.pyamsoft.tetherfi.server.clients.BlockedClients
@@ -114,6 +115,7 @@ private data class TestChannelCreator(
       )
 }
 
+@Suppress("detekt:EmptyFunctionBlock")
 internal object TestSetup {
 
   @CheckResult
@@ -230,6 +232,7 @@ internal object TestSetup {
     )
   }
 
+  @LintIgnoreLongMethod
   suspend fun withNetty(
       hostName: String = "127.0.0.1",
       port: Int = 8228,

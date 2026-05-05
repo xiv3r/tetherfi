@@ -18,6 +18,7 @@ package com.pyamsoft.tetherfi.server.proxy.session.tcp.socks.four
 
 import android.annotation.SuppressLint
 import androidx.annotation.CheckResult
+import com.pyamsoft.pydroid.core.LintIgnoreLongMethod
 import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
@@ -105,6 +106,7 @@ internal constructor(
     usingResponder(proxyOutput) { sendRefusal() }
   }
 
+  @LintIgnoreLongMethod
   override suspend fun handleSocksCommand(
       scope: CoroutineScope,
       socketCreator: SocketCreator,

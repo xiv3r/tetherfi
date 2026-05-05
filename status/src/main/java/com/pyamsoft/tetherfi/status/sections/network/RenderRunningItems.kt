@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.pyamsoft.pydroid.core.LintIgnoreLongMethod
 import com.pyamsoft.pydroid.theme.keylines
 import com.pyamsoft.tetherfi.server.broadcast.BroadcastType
 import com.pyamsoft.tetherfi.status.MutableStatusViewState
@@ -49,6 +50,7 @@ private enum class RenderRunningItemsContentTypes {
   RUNNING_TILES,
 }
 
+@LintIgnoreLongMethod
 internal fun LazyListScope.renderRunningItems(
     modifier: Modifier = Modifier,
     state: StatusViewState,

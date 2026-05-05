@@ -16,6 +16,7 @@
 
 package com.pyamsoft.tetherfi.server.lock
 
+@Suppress("detekt:EmptyFunctionBlock")
 internal object NoopLock : Locker.Lock {
 
   override suspend fun acquire(): Locker.Lock.Releaser {

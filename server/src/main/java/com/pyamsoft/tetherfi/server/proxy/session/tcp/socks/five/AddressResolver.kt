@@ -17,6 +17,7 @@
 package com.pyamsoft.tetherfi.server.proxy.session.tcp.socks.five
 
 import androidx.annotation.CheckResult
+import com.pyamsoft.pydroid.core.LintIgnoreTooGenericExceptionCaught
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.proxy.ServerDispatcher
 import java.net.Inet4Address
@@ -77,6 +78,7 @@ internal object AddressResolver {
     }
 
     // Then address
+    @LintIgnoreTooGenericExceptionCaught
     val destinationAddress =
         try {
           readDestinationAddress(

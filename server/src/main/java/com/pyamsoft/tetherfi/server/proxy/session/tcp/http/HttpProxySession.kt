@@ -16,6 +16,7 @@
 
 package com.pyamsoft.tetherfi.server.proxy.session.tcp.http
 
+import com.pyamsoft.pydroid.core.LintIgnoreTooGenericExceptionCaught
 import com.pyamsoft.pydroid.core.ThreadEnforcer
 import com.pyamsoft.pydroid.util.ifNotCancellation
 import com.pyamsoft.tetherfi.core.notification.NotificationErrorLauncher
@@ -153,6 +154,7 @@ internal constructor(
     }
   }
 
+  @LintIgnoreTooGenericExceptionCaught
   override suspend fun proxyToInternet(
       scope: CoroutineScope,
       socketCreator: SocketCreator,

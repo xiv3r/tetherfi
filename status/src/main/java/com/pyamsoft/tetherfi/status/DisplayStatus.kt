@@ -25,17 +25,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.pyamsoft.pydroid.theme.keylines
 import com.pyamsoft.tetherfi.server.status.RunningStatus
 import com.pyamsoft.tetherfi.status.sections.StatusItem
-
-internal enum class StatusSize {
-  SMALL,
-  NORMAL,
-}
 
 @Composable
 internal fun DisplayStatus(
@@ -45,21 +41,15 @@ internal fun DisplayStatus(
     size: StatusSize,
     onClickShowError: (() -> Unit)? = null,
 ) {
-  val context = LocalContext.current
   val text =
-      remember(
-          status,
-          context,
-      ) {
         when (status) {
           is RunningStatus.Error ->
-              status.throwable.message ?: context.getString(R.string.status_error)
-          is RunningStatus.NotRunning -> context.getString(R.string.status_not_running)
-          is RunningStatus.Running -> context.getString(R.string.status_running)
-          is RunningStatus.Starting -> context.getString(R.string.status_starting)
-          is RunningStatus.Stopping -> context.getString(R.string.status_stopping)
+              status.throwable.message ?: stringResource(R.string.status_error)
+          is RunningStatus.NotRunning -> stringResource(R.string.status_not_running)
+          is RunningStatus.Running -> stringResource(R.string.status_running)
+          is RunningStatus.Starting -> stringResource(R.string.status_starting)
+          is RunningStatus.Stopping -> stringResource(R.string.status_stopping)
         }
-      }
 
   val textErrorColor = MaterialTheme.colorScheme.onErrorContainer
   val textRunningColor = MaterialTheme.colorScheme.onTertiaryContainer

@@ -17,6 +17,8 @@
 package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.udp
 
 import androidx.annotation.CheckResult
+import com.pyamsoft.pydroid.core.LintIgnoreLongMethod
+import com.pyamsoft.pydroid.core.LintIgnoreTooGenericExceptionCaught
 import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.FRAGMENT_ZERO
@@ -39,6 +41,7 @@ object UDP {
   private val VALID_PORT_RANGE = 1..<65535
 
   @CheckResult
+  @LintIgnoreTooGenericExceptionCaught
   private fun readAddress(
       channelId: String,
       buf: ByteBuf,
@@ -110,6 +113,7 @@ object UDP {
     }
   }
 
+  @LintIgnoreLongMethod
   fun unwrap(
       channelId: String,
       ctx: ChannelHandlerContext,

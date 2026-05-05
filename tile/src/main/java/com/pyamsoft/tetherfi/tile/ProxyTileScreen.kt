@@ -263,7 +263,7 @@ private fun Connector(
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.SpaceEvenly,
   ) {
-    repeat(3) {
+    repeat(times = 3) {
       Icon(
           modifier = Modifier.size(CONNECTOR_SIZE),
           painter = IconPainters.radioButtonUnchecked(),
@@ -286,7 +286,7 @@ private fun SideEffectStep(
     // If the current status is an error
     if (status is RunningStatus.Error) {
       // display the error message for ~5 seconds and then dismiss
-      delay(5_000)
+      delay(timeMillis = 5_000)
       handleDismissed()
       return@LaunchedEffect
     }
@@ -298,7 +298,7 @@ private fun SideEffectStep(
           initialStatus is RunningStatus.NotRunning || initialStatus is RunningStatus.Starting
       if (isInitialStarting && status is RunningStatus.Running) {
         // display for ~2 seconds and dismiss
-        delay(2_000)
+        delay(timeMillis = 2_000)
         handleDismissed()
         return@LaunchedEffect
       }
@@ -308,7 +308,7 @@ private fun SideEffectStep(
           initialStatus is RunningStatus.Running || initialStatus is RunningStatus.Stopping
       if (isInitialStopping && status is RunningStatus.NotRunning) {
         // display for ~2 seconds and dismiss
-        delay(2_000)
+        delay(timeMillis = 2_000)
         handleDismissed()
         return@LaunchedEffect
       }

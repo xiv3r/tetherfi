@@ -17,6 +17,7 @@
 package com.pyamsoft.tetherfi.server.proxy.session.tcp
 
 import androidx.annotation.CheckResult
+import com.pyamsoft.pydroid.core.LintIgnoreTooGenericExceptionCaught
 import com.pyamsoft.pydroid.core.ThreadEnforcer
 import com.pyamsoft.pydroid.util.ifNotCancellation
 import com.pyamsoft.tetherfi.core.Timber
@@ -208,10 +209,6 @@ protected constructor(
     )
   }
 
-  protected inline fun debugLog(message: () -> String) {
-    Timber.d { "$logTag: ${message()}" }
-  }
-
   protected inline fun warnLog(message: () -> String) {
     Timber.w { "$logTag: ${message()}" }
   }
@@ -220,6 +217,7 @@ protected constructor(
     Timber.e(throwable) { "$logTag: ${message()}" }
   }
 
+  @LintIgnoreTooGenericExceptionCaught
   override suspend fun exchange(
       scope: CoroutineScope,
       socketCreator: SocketCreator,

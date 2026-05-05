@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 pyamsoft
+ * Copyright 2026 pyamsoft
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,9 @@
  * limitations under the License.
  */
 
-package com.pyamsoft.tetherfi.ui
+package com.pyamsoft.tetherfi.status.sections.network
 
-import androidx.annotation.CheckResult
-import com.pyamsoft.pydroid.ui.defaults.TypographyDefaults
-
-private const val ALPHA_ENABLED = 1F
-private const val SURFACE_ALPHA_DISABLED = 0.75F
-
-@CheckResult
-fun surfaceAlpha(isEnabled: Boolean): Float {
-  return if (isEnabled) ALPHA_ENABLED else SURFACE_ALPHA_DISABLED
-}
-
-@CheckResult
-fun textAlpha(isEnabled: Boolean): Float {
-  return if (isEnabled) ALPHA_ENABLED else TypographyDefaults.ALPHA_DISABLED
+internal enum class StatusEditorMode {
+  STANDARD,
+  OUTLINED,
 }

@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
+@file:LintIgnoreTooManyFunctions
+
 package com.pyamsoft.tetherfi.status
 
 import com.pyamsoft.pydroid.arch.AbstractViewModeler
+import com.pyamsoft.pydroid.core.LintIgnoreTooManyFunctions
 import com.pyamsoft.tetherfi.server.ExpertPreferences
 import com.pyamsoft.tetherfi.server.ProxyPreferences
 import com.pyamsoft.tetherfi.server.ServerDefaults
@@ -51,15 +54,14 @@ internal constructor(
   )
 
   private fun markPreferencesLoaded(config: LoadConfig) {
-    if (
-        config.httpPort &&
-            config.isHttpEnabled &&
-            config.socksPort &&
-            config.isSocksEnabled &&
-            config.ssid &&
-            config.password &&
-            config.band
-    ) {
+    val isHttpReady = config.httpPort && config.isHttpEnabled
+    val isSocksReady = config.socksPort && config.isSocksEnabled
+    val isProxyReady = isHttpReady && isSocksReady
+    val isWifiDirectReady = config.ssid &&
+        config.password &&
+        config.band
+
+    if (isProxyReady && isWifiDirectReady) {
       state.loadingState.value = StatusViewState.LoadingState.DONE
     }
   }
@@ -96,9 +98,9 @@ internal constructor(
     scope.bindConfigPreferences(config)
   }
 
-  private fun CoroutineScope.bindConfigPreferences(config: LoadConfig) {
+  private fun CoroutineScope.bindProxyPreferences(config: LoadConfig) {
     val scope = this
-    val s = state
+
 
     proxyPreferences.listenForHttpEnabledChanges().also { f ->
       scope.launch(context = Dispatchers.Default) {
@@ -147,50 +149,64 @@ internal constructor(
         markPreferencesLoaded(config)
       }
     }
+  }
 
-    if (ServerDefaults.canUseCustomConfig()) {
-      // Only pull once since after this point, the state will be driven by the input
-      wifiPreferences.listenForSsidChanges().also { f ->
-        scope.launch(context = Dispatchers.Default) {
-          // Only pull once since after this point, the state will be driven by the input
-          val ssid = f.first()
+  private fun CoroutineScope.bindWifiPreferences(config: LoadConfig) {
+    val scope = this
+    val s = state
 
-          // Write the SSID to save it to Preferences
-          handleSsidChanged(ssid)
+    // Only pull once since after this point, the state will be driven by the input
+    wifiPreferences.listenForSsidChanges().also { f ->
+      scope.launch(context = Dispatchers.Default) {
+        // Only pull once since after this point, the state will be driven by the input
+        val ssid = f.first()
 
-          config.ssid = true
-          markPreferencesLoaded(config)
-        }
+        // Write the SSID to save it to Preferences
+        handleSsidChanged(ssid)
+
+        config.ssid = true
+        markPreferencesLoaded(config)
       }
+    }
 
-      // Only pull once since after this point, the state will be driven by the input
-      wifiPreferences.listenForPasswordChanges().also { f ->
-        scope.launch(context = Dispatchers.Default) {
-          // Only pull once since after this point, the state will be driven by the input
-          val password = f.first()
+    // Only pull once since after this point, the state will be driven by the input
+    wifiPreferences.listenForPasswordChanges().also { f ->
+      scope.launch(context = Dispatchers.Default) {
+        // Only pull once since after this point, the state will be driven by the input
+        val password = f.first()
 
-          // Write the password to save it to Preferences
-          handlePasswordChanged(password)
+        // Write the password to save it to Preferences
+        handlePasswordChanged(password)
 
-          config.password = true
-          markPreferencesLoaded(config)
-        }
+        config.password = true
+        markPreferencesLoaded(config)
       }
+    }
 
-      wifiPreferences.listenForNetworkBandChanges().also { f ->
-        scope.launch(context = Dispatchers.Default) {
-          f.collect { band ->
-            // Write the band to save it to Preferences
-            handleChangeBand(band)
+    wifiPreferences.listenForNetworkBandChanges().also { f ->
+      scope.launch(context = Dispatchers.Default) {
+        f.collect { band ->
+          // Write the band to save it to Preferences
+          handleChangeBand(band)
 
-            // Watch constantly but only update the initial load config if we haven't loaded yet
-            if (s.loadingState.value != StatusViewState.LoadingState.DONE) {
-              config.band = true
-              markPreferencesLoaded(config)
-            }
+          // Watch constantly but only update the initial load config if we haven't loaded yet
+          if (s.loadingState.value != StatusViewState.LoadingState.DONE) {
+            config.band = true
+            markPreferencesLoaded(config)
           }
         }
       }
+    }
+  }
+
+  private fun CoroutineScope.bindConfigPreferences(config: LoadConfig) {
+    val scope = this
+    val s = state
+
+    scope.bindProxyPreferences(config)
+
+    if (ServerDefaults.canUseCustomConfig()) {
+      scope.bindWifiPreferences(config)
     } else {
       // No custom WiFi Direct config is allowed, fallback
       s.ssid.value = ""

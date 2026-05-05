@@ -18,8 +18,10 @@ package com.pyamsoft.tetherfi.ui.icons
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.painterResource
+import com.pyamsoft.pydroid.core.LintIgnoreTooManyFunctions
 import com.pyamsoft.tetherfi.ui.R
 
+@LintIgnoreTooManyFunctions
 object IconPainters {
 
   @Composable fun info() = painterResource(R.drawable.info_24px)

@@ -100,7 +100,7 @@ private fun AttemptRefreshButton(
 
   LaunchedEffect(fakeSpin) {
     if (fakeSpin) {
-      delay(1000L)
+      delay(timeMillis = 1000L)
       handleResetFakeSpin()
     }
   }

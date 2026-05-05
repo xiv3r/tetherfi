@@ -17,6 +17,8 @@
 package com.pyamsoft.tetherfi.server.proxy.session.tcp.socks
 
 import androidx.annotation.CheckResult
+import com.pyamsoft.pydroid.core.LintIgnoreLongMethod
+import com.pyamsoft.pydroid.core.LintIgnoreTooGenericExceptionCaught
 import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.pydroid.core.requireNotNull
 import com.pyamsoft.pydroid.util.ifNotCancellation
@@ -55,6 +57,9 @@ protected constructor(
     protected val socketTagger: SocketTagger,
 ) : SOCKSImplementation<R> {
 
+  @LintIgnoreLongMethod
+  // TODO remove once supported for Expressions
+  @LintIgnoreTooGenericExceptionCaught
   private suspend fun connect(
       scope: CoroutineScope,
       socketCreator: SocketCreator,
@@ -174,6 +179,9 @@ protected constructor(
           },
       )
 
+  @LintIgnoreLongMethod
+  // TODO remove once supported for Expressions
+  @LintIgnoreTooGenericExceptionCaught
   private suspend fun bind(
       scope: CoroutineScope,
       socketCreator: SocketCreator,
@@ -258,6 +266,7 @@ protected constructor(
             // Track this socket for when we fully shut down
             socketTracker.track(bound)
 
+            // TODO Once supported on Expressions @LintIgnoreTooGenericExceptionCaught
             bound.use { socket ->
               val hostAddress = socket.remoteAddress.cast<InetSocketAddress>().requireNotNull()
               if (hostAddress.toJavaAddress() != destinationAddress) {

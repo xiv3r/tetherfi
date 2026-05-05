@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
+@file:LintIgnoreTooManyFunctions
+
 package com.pyamsoft.tetherfi.server.proxy.manager
 
 import androidx.annotation.CheckResult
 import com.pyamsoft.pydroid.bus.EventConsumer
+import com.pyamsoft.pydroid.core.LintIgnoreTooGenericExceptionCaught
+import com.pyamsoft.pydroid.core.LintIgnoreTooManyFunctions
 import com.pyamsoft.pydroid.core.ThreadEnforcer
 import com.pyamsoft.pydroid.util.ifNotCancellation
 import com.pyamsoft.tetherfi.core.Timber
@@ -236,6 +240,7 @@ protected constructor(
   }
 
   @CheckResult
+  @Suppress("detekt:ThrowsCount")
   protected fun getServerAddress(
       hostName: String,
       port: Int,
@@ -244,13 +249,13 @@ protected constructor(
   ): SocketAddress {
     // Port must be in the valid range
     if (verifyPort) {
-      if (port > 65000) {
+      if (port > PORT_MAX_ALLOWED) {
         val err = "Port must be <65000: $port"
         warnLog { err }
         throw IllegalArgumentException(err)
       }
 
-      if (port <= 1024) {
+      if (port < PORT_MIN_ALLOWED) {
         val err = "Port must be >1024: $port"
         warnLog { err }
         throw IllegalArgumentException(err)
@@ -273,6 +278,8 @@ protected constructor(
   }
 
   /** This function must ALWAYS call usingSocketBuilder {} or else a socket may potentially leak */
+  // TODO move when supported on Expression
+  @LintIgnoreTooGenericExceptionCaught
   override suspend fun loop(
       lock: Locker.Lock,
       onOpened: suspend () -> Unit,
@@ -337,4 +344,11 @@ protected constructor(
   @CheckResult protected abstract suspend fun openServer(builder: SocketBuilder): S
 
   protected abstract suspend fun onServerClosing()
+
+  companion object {
+
+    private const val PORT_MIN_ALLOWED = 1025
+    private const val PORT_MAX_ALLOWED = 65000
+
+  }
 }

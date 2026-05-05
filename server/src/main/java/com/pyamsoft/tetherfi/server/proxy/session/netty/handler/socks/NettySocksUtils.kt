@@ -20,9 +20,11 @@ import androidx.annotation.CheckResult
 import io.netty.handler.codec.socksx.v5.Socks5AddressType
 import java.net.InetSocketAddress
 
+private const val ADDR_SIZE_IPV4 = 4
+
 @CheckResult
 internal fun resolveSocks5AddressType(localAddr: InetSocketAddress): Socks5AddressType {
-  return if (localAddr.address.address.size == 4) {
+  return if (localAddr.address.address.size == ADDR_SIZE_IPV4) {
     Socks5AddressType.IPv4
   } else {
     Socks5AddressType.IPv6

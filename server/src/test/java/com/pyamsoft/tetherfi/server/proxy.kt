@@ -17,6 +17,7 @@
 package com.pyamsoft.tetherfi.server
 
 import com.pyamsoft.pydroid.bus.internal.DefaultEventBus
+import com.pyamsoft.pydroid.core.LintIgnoreLongMethod
 import com.pyamsoft.pydroid.core.ThreadEnforcer
 import com.pyamsoft.tetherfi.core.AppDevEnvironment
 import com.pyamsoft.tetherfi.core.notification.NotificationErrorLauncher
@@ -57,6 +58,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.newFixedThreadPoolContext
 import timber.log.Timber
 
+@LintIgnoreLongMethod
+@Suppress("detekt:EmptyFunctionBlock")
 @OptIn(DelicateCoroutinesApi::class)
 internal suspend fun setupProxy(
     scope: CoroutineScope,

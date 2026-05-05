@@ -14,9 +14,13 @@
  * limitations under the License.
  */
 
+@file:LintIgnoreTooManyFunctions
+
 package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks
 
 import androidx.annotation.CheckResult
+import com.pyamsoft.pydroid.core.LintIgnoreLongMethod
+import com.pyamsoft.pydroid.core.LintIgnoreTooManyFunctions
 import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
@@ -103,6 +107,7 @@ internal constructor(
     ctx.writeAndFlush(DefaultSocks5InitialResponse(Socks5AuthMethod.NO_AUTH))
   }
 
+  @LintIgnoreLongMethod
   private fun handleSocksUdpAssociateRequest(
       ctx: ChannelHandlerContext,
       channelId: String,

@@ -55,8 +55,11 @@ private enum class ProxyHttpEvents(
     val code: Int,
     val message: String,
 ) {
+  @Suppress("detekt:MagicNumber")
   CONNECT(200, "Connection Established"),
+  @Suppress("detekt:MagicNumber")
   ERROR(502, "Bad Gateway"),
+  @Suppress("detekt:MagicNumber")
   BLOCKED(403, "Forbidden"),
 }
 

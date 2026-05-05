@@ -26,6 +26,7 @@ import com.pyamsoft.pydroid.ui.debug.InAppDebugStatus
 import com.pyamsoft.pydroid.ui.installPYDroid
 import com.pyamsoft.pydroid.util.isDebugMode
 import com.pyamsoft.tetherfi.core.GITHUB_URL
+import com.pyamsoft.tetherfi.core.LintIgnoreMaxLineLength
 import com.pyamsoft.tetherfi.core.PRIVACY_POLICY_URL
 import com.pyamsoft.tetherfi.core.TERMS_CONDITIONS_URL
 import kotlinx.coroutines.CoroutineName
@@ -144,6 +145,7 @@ class TFApp : Application() {
           "A fork of Ktor that adds support for Socket customization (used for the 'Preferred Network' feature)",
       )
 
+      @LintIgnoreMaxLineLength
       OssLibraries.add(
           "AndroidX Activity Compose",
           "https://android.googlesource.com/platform/frameworks/support/+/androidx-master-dev/activity/activity-compose",
@@ -157,6 +159,7 @@ class TFApp : Application() {
           license = OssLicenses.MIT,
       )
 
+      @LintIgnoreMaxLineLength
       OssLibraries.add(
           "Netty",
           "https://netty.io",

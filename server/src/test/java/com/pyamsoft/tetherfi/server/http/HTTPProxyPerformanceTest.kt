@@ -16,6 +16,7 @@
 
 package com.pyamsoft.tetherfi.server.http
 
+import com.pyamsoft.pydroid.core.LintIgnoreLongMethod
 import com.pyamsoft.pydroid.util.ifNotCancellation
 import com.pyamsoft.tetherfi.server.HOSTNAME
 import com.pyamsoft.tetherfi.server.RESPONSE_TEXT
@@ -61,6 +62,7 @@ $RESPONSE_TEXT"""
 
 class HTTPProxyPerformanceTest {
 
+  @LintIgnoreLongMethod
   private suspend fun CoroutineScope.testServerPerformance(
       proxyTypes: Collection<SharedProxy.Type>,
       nThreads: Int,

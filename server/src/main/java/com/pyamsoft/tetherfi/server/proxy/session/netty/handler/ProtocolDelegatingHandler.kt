@@ -17,6 +17,7 @@
 package com.pyamsoft.tetherfi.server.proxy.session.netty.handler
 
 import androidx.annotation.CheckResult
+import com.pyamsoft.pydroid.core.LintIgnoreLongMethod
 import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
@@ -106,6 +107,7 @@ private constructor(
     allowedClients.seen(client)
   }
 
+  @LintIgnoreLongMethod
   override fun decode(ctx: ChannelHandlerContext, input: ByteBuf, out: List<Any>) {
     if (!input.isReadable) {
       Timber.w { "DROP: Unreadable input buffer sent." }

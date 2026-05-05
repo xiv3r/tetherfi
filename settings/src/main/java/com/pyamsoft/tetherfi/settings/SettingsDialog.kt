@@ -38,6 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.pyamsoft.pydroid.core.LintIgnoreLongMethod
 import com.pyamsoft.pydroid.theme.keylines
 import com.pyamsoft.pydroid.ui.app.rememberDialogProperties
 import com.pyamsoft.pydroid.ui.defaults.TypographyDefaults
@@ -193,6 +194,7 @@ private fun LazyListScope.renderExperiments(
   }
 }
 
+@LintIgnoreLongMethod
 private fun LazyListScope.renderExtraDebugContent(
     itemModifier: Modifier = Modifier,
     appEnvironment: AppDevEnvironment,

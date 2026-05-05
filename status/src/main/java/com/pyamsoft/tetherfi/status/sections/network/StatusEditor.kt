@@ -26,11 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.VisualTransformation
 
-internal enum class StatusEditorMode {
-  STANDARD,
-  OUTLINED,
-}
-
 @Composable
 internal fun StatusEditor(
     modifier: Modifier = Modifier,

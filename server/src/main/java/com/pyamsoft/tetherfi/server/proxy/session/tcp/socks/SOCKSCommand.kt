@@ -21,8 +21,13 @@ import androidx.annotation.CheckResult
 enum class SOCKSCommand(
     private val byte: Byte,
 ) {
+  @Suppress("detekt:MagicNumber")
   CONNECT(1),
+
+  @Suppress("detekt:MagicNumber")
   BIND(2),
+
+  @Suppress("detekt:MagicNumber")
   UDP_ASSOCIATE(3);
 
   companion object {

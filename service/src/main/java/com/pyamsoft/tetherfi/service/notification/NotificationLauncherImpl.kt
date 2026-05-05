@@ -96,7 +96,7 @@ internal constructor(
     }
   }
 
-  private fun CoroutineScope.watchNotification() {
+  private fun CoroutineScope.watchBroadcastStatus() {
     val scope = this
 
     // Supervisor job will cancel all children
@@ -137,7 +137,15 @@ internal constructor(
           }
         }
       }
+    }
+  }
 
+  private fun CoroutineScope.watchNotification() {
+    val scope = this
+
+    scope.watchBroadcastStatus()
+
+    scope.launch {
       // Listen for client updates
       allowedClients
           .listenForClients()

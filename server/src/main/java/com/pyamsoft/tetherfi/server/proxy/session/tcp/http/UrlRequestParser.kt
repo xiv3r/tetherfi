@@ -17,6 +17,7 @@
 package com.pyamsoft.tetherfi.server.proxy.session.tcp.http
 
 import androidx.annotation.CheckResult
+import com.pyamsoft.pydroid.core.LintIgnoreTooGenericExceptionCaught
 import com.pyamsoft.pydroid.core.requireNotNull
 import com.pyamsoft.pydroid.util.ifNotCancellation
 import com.pyamsoft.tetherfi.core.Timber
@@ -108,6 +109,9 @@ internal constructor(
    * If the URL does not include the port, determine it from the protocol or just assume it is HTTP
    */
   @CheckResult
+  // TODO move when supported on Expression
+  @LintIgnoreTooGenericExceptionCaught
+  @Suppress("detekt:SwallowedException")
   private fun getUrlAndPort(methodData: MethodData): DestinationInfo? {
 
     // This could be anything like the following
@@ -157,7 +161,7 @@ internal constructor(
       } else {
         Timber.w { "No port provided and no default port for protocol: $hopefullyValidUrl" }
         // Default to port 80
-        port = 80
+        port = PORT_HTTP
       }
 
       // Return the path and the query
@@ -185,6 +189,8 @@ internal constructor(
     }
   }
 
+  // TODO move when supported on Expression
+  @LintIgnoreTooGenericExceptionCaught
   override fun parse(line: String): HttpProxyRequest {
     try {
       val methodData = getMethodAndUrlString(line)
@@ -249,5 +255,7 @@ internal constructor(
     private fun hasProtocol(url: String): Boolean {
       return url.startsWith("http://") || url.startsWith("https://")
     }
+
+    private const val PORT_HTTP = 80
   }
 }

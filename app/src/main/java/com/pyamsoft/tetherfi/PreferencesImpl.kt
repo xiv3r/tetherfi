@@ -29,6 +29,8 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.preference.PreferenceManager
+import com.pyamsoft.pydroid.core.LintIgnoreTooGenericExceptionCaught
+import com.pyamsoft.pydroid.core.LintIgnoreTooManyFunctions
 import com.pyamsoft.pydroid.core.ThreadEnforcer
 import com.pyamsoft.pydroid.util.ifNotCancellation
 import com.pyamsoft.tetherfi.core.InAppRatingPreferences
@@ -60,6 +62,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 @Singleton
+@LintIgnoreTooManyFunctions
 internal class PreferencesImpl
 @Inject
 internal constructor(private val enforcer: ThreadEnforcer, context: Context) :
@@ -124,6 +127,7 @@ internal constructor(private val enforcer: ThreadEnforcer, context: Context) :
     )
   }
 
+  @LintIgnoreTooGenericExceptionCaught
   private inline fun <T : Any> setPreference(
       key: Preferences.Key<T>,
       fallbackValue: T,

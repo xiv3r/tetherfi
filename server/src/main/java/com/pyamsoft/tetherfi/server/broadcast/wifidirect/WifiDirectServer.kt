@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:LintIgnoreTooManyFunctions
+
 package com.pyamsoft.tetherfi.server.broadcast.wifidirect
 
 import android.annotation.SuppressLint
@@ -28,6 +30,7 @@ import android.os.Build
 import android.os.Looper
 import androidx.annotation.CheckResult
 import androidx.core.content.getSystemService
+import com.pyamsoft.pydroid.core.LintIgnoreTooManyFunctions
 import com.pyamsoft.pydroid.core.ThreadEnforcer
 import com.pyamsoft.pydroid.core.requireNotNull
 import com.pyamsoft.pydroid.util.ifNotCancellation

@@ -14,9 +14,13 @@
  * limitations under the License.
  */
 
+@file:LintIgnoreTooManyFunctions
+
 package com.pyamsoft.tetherfi.server.proxy.session.netty.handler.http
 
 import androidx.annotation.CheckResult
+import com.pyamsoft.pydroid.core.LintIgnoreLongMethod
+import com.pyamsoft.pydroid.core.LintIgnoreTooManyFunctions
 import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.server.ServerSocketTimeout
@@ -132,6 +136,7 @@ private constructor(
     )
   }
 
+  @LintIgnoreLongMethod
   private fun handleHttpsConnect(
       ctx: ChannelHandlerContext,
       channelId: String,
@@ -258,6 +263,7 @@ private constructor(
     }
   }
 
+  @LintIgnoreLongMethod
   private fun handleHttpForward(
       ctx: ChannelHandlerContext,
       channelId: String,
@@ -440,6 +446,10 @@ private constructor(
 
   companion object {
 
+    private const val PORT_HTTP = 80
+    private const val PORT_HTTPS = 443
+    private const val PORT_UNKNOWN = 0
+
     private const val HTTP_PREFIX = "http://"
     private const val HTTPS_PREFIX = "https://"
 
@@ -464,13 +474,13 @@ private constructor(
       val uriWithoutSchema: String
       if (uri.startsWith(HTTPS_PREFIX)) {
         uriWithoutSchema = uri.substring(HTTPS_PREFIX.length)
-        defaultPortBasedOnSchema = 443
+        defaultPortBasedOnSchema = PORT_HTTPS
       } else if (uri.startsWith(HTTP_PREFIX)) {
         uriWithoutSchema = uri.substring(HTTP_PREFIX.length)
-        defaultPortBasedOnSchema = 80
+        defaultPortBasedOnSchema = PORT_HTTP
       } else {
         uriWithoutSchema = uri
-        defaultPortBasedOnSchema = 0
+        defaultPortBasedOnSchema = PORT_UNKNOWN
       }
 
       if (uriWithoutSchema.isBlank()) {

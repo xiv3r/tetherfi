@@ -17,6 +17,7 @@
 package com.pyamsoft.tetherfi.server.proxy.session.tcp.socks.five
 
 import androidx.annotation.CheckResult
+import com.pyamsoft.pydroid.core.LintIgnoreLongMethod
 import com.pyamsoft.pydroid.core.ThreadEnforcer
 import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.pydroid.core.requireNotNull
@@ -166,7 +167,9 @@ internal data class UDPRelayServer(
   }
 
   @CheckResult
+  @LintIgnoreLongMethod
   @OptIn(InternalIoApi::class)
+  @Suppress("detekt:CyclomaticComplexMethod")
   inline fun relay(
       scope: CoroutineScope,
       crossinline onError: suspend (Throwable) -> Unit,

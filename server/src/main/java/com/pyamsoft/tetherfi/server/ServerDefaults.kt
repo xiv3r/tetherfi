@@ -38,21 +38,19 @@ object ServerDefaults {
 
   val WIFI_NETWORK_BAND = ServerNetworkBand.LEGACY
 
-  @JvmStatic
-  @CheckResult
-  fun getWifiSsidPrefix(): String {
-    return "DIRECT-TF-"
-  }
+  const val WIFI_SSID_PREFIX = "DIRECT-TF-"
 
   @JvmStatic
   @CheckResult
   fun asWifiSsid(ssid: String): String {
-    return "${getWifiSsidPrefix()}${ssid}"
+    return "${WIFI_SSID_PREFIX}${ssid}"
   }
 
+  private const val API_CUSTOM_CONFIG_SUPPORT = 29
+
   @CheckResult
-  @ChecksSdkIntAtLeast(api = Build.VERSION_CODES.Q)
+  @ChecksSdkIntAtLeast(api = API_CUSTOM_CONFIG_SUPPORT)
   fun canUseCustomConfig(): Boolean {
-    return Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+    return Build.VERSION.SDK_INT >= API_CUSTOM_CONFIG_SUPPORT
   }
 }

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:LintIgnoreTooManyFunctions
+
 package com.pyamsoft.tetherfi.status.sections.network
 
 import androidx.annotation.StringRes
@@ -45,6 +47,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.pyamsoft.pydroid.core.LintIgnoreLongMethod
+import com.pyamsoft.pydroid.core.LintIgnoreTooManyFunctions
 import com.pyamsoft.pydroid.theme.keylines
 import com.pyamsoft.tetherfi.server.ServerDefaults
 import com.pyamsoft.tetherfi.server.broadcast.BroadcastType
@@ -69,6 +73,7 @@ private enum class RenderEditableItemsContentTypes {
   EDIT_PORTS,
 }
 
+@LintIgnoreLongMethod
 internal fun LazyListScope.renderEditableItems(
     modifier: Modifier = Modifier,
     appName: String,
@@ -220,7 +225,7 @@ private fun NetworkSetupExplainer(
     modifier: Modifier = Modifier,
     appName: String,
 ) {
-  val requiredPrefix = remember { ServerDefaults.getWifiSsidPrefix() }
+  val requiredPrefix = remember { ServerDefaults.WIFI_SSID_PREFIX }
 
   val (show, setShow) = remember { mutableStateOf(false) }
 

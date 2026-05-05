@@ -20,6 +20,7 @@ import androidx.annotation.CheckResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 
 /*
  * Copyright 2024 pyamsoft
@@ -37,14 +38,15 @@ import androidx.compose.ui.platform.LocalContext
  * limitations under the License.
  */
 
+private const val PORT_MIN_ALLOWED = 1025
+private const val PORT_MAX_ALLOWED = 65000
+
 @CheckResult
 @Composable
 fun rememberPortNumber(portNumber: Int): String {
-  val context = LocalContext.current
-  return remember(
-      context,
-      portNumber,
-  ) {
-    if (portNumber in 1024..65000) "$portNumber" else context.getString(R.string.invalid_port)
+  val portNumberString = remember(portNumber) {
+    if (portNumber in PORT_MIN_ALLOWED..PORT_MAX_ALLOWED) "$portNumber" else ""
   }
+
+  return portNumberString.ifBlank { stringResource(R.string.invalid_port) }
 }

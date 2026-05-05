@@ -17,6 +17,8 @@
 package com.pyamsoft.tetherfi.server.proxy.session.tcp.socks.five
 
 import androidx.annotation.CheckResult
+import com.pyamsoft.pydroid.core.LintIgnoreLongMethod
+import com.pyamsoft.pydroid.core.LintIgnoreTooGenericExceptionCaught
 import com.pyamsoft.pydroid.core.ThreadEnforcer
 import com.pyamsoft.pydroid.core.cast
 import com.pyamsoft.pydroid.util.ifNotCancellation
@@ -82,6 +84,7 @@ internal constructor(
     Responder(proxyOutput).also { block(it) }
   }
 
+  @LintIgnoreLongMethod
   override suspend fun udpAssociate(
       scope: CoroutineScope,
       timeout: ServerSocketTimeout,
@@ -109,6 +112,7 @@ internal constructor(
             appScope.launch(context = Dispatchers.IO) { onError(it) }
           },
           onBuild = { builder ->
+            @LintIgnoreTooGenericExceptionCaught
             val bound =
                 try {
                   builder
@@ -196,6 +200,7 @@ internal constructor(
           },
       )
 
+  @LintIgnoreLongMethod
   override suspend fun handleSocksCommand(
       scope: CoroutineScope,
       socketCreator: SocketCreator,

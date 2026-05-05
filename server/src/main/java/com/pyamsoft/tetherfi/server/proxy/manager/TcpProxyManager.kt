@@ -18,6 +18,7 @@ package com.pyamsoft.tetherfi.server.proxy.manager
 
 import androidx.annotation.CheckResult
 import com.pyamsoft.pydroid.bus.EventConsumer
+import com.pyamsoft.pydroid.core.LintIgnoreTooGenericExceptionCaught
 import com.pyamsoft.pydroid.core.ThreadEnforcer
 import com.pyamsoft.pydroid.util.ifNotCancellation
 import com.pyamsoft.tetherfi.core.AppDevEnvironment
@@ -100,7 +101,7 @@ internal constructor(
     }
 
     val port = remote.port
-    if (port <= 0 || port >= 65535) {
+    if (port !in 1..<PORT_MAXIMUM) {
       warnLog { "Block resolve: Proxy client has invalid port" }
       return null
     }
@@ -141,6 +142,8 @@ internal constructor(
    * This function must ALWAYS call connection.usingConnection {} or else a socket may potentially
    * leak
    */
+  // TODO move when valid for Expression
+  @LintIgnoreTooGenericExceptionCaught
   private suspend fun runSession(
       scope: CoroutineScope,
       timeout: ServerSocketTimeout,
@@ -261,6 +264,8 @@ internal constructor(
     throw IllegalStateException("TCP Proxy failed to grab a socket correctly")
   }
 
+  // TODO Move when valid for Expression
+  @LintIgnoreTooGenericExceptionCaught
   override suspend fun runServer(lock: Locker.Lock, tracker: SocketTracker, server: ServerSocket) =
       withContext(context = serverDispatcher.primary) {
         val addr = server.localAddress
@@ -329,5 +334,7 @@ internal constructor(
             // Close normally by server
             "Broken pipe",
         )
+
+    private const val PORT_MAXIMUM = 65535
   }
 }

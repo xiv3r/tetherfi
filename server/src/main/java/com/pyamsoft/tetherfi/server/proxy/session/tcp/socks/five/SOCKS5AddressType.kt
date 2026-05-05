@@ -21,8 +21,11 @@ import com.pyamsoft.tetherfi.server.proxy.session.tcp.socks.BaseSOCKSImplementat
 
 internal enum class SOCKS5AddressType(internal val byte: Byte) :
     BaseSOCKSImplementation.SOCKSAddressType {
+  @Suppress("detekt:MagicNumber")
   IPV4(1),
+  @Suppress("detekt:MagicNumber")
   DOMAIN_NAME(3),
+  @Suppress("detekt:MagicNumber")
   IPV6(4);
 
   companion object {

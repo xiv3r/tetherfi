@@ -38,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.pyamsoft.pydroid.core.LintIgnoreLongMethod
 import com.pyamsoft.pydroid.theme.keylines
 import com.pyamsoft.pydroid.ui.defaults.ImageDefaults
 import com.pyamsoft.pydroid.ui.haptics.LocalHapticManager
@@ -57,6 +58,7 @@ private enum class RenderBroadcastFrequencyContentTypes {
   BANDS
 }
 
+@LintIgnoreLongMethod
 internal fun LazyListScope.renderBroadcastFrequency(
     itemModifier: Modifier = Modifier,
     state: StatusViewState,
