@@ -63,9 +63,7 @@ internal constructor(
     val channel = ctx.channel()
     channel.apply { attr(CLIENT).set(null) }
 
-    if (channel.isOpen) {
-      channel.flushAndClose()
-    }
+    channel.flushAndClose()
   }
 
   @CheckResult

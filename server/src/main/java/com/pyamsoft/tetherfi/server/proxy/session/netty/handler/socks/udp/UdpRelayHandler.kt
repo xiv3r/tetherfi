@@ -194,13 +194,13 @@ private constructor(
     // One last report before we close
     getTetherClient(ctx)?.also { produceByteReport(it) }
 
-    ctx.flushAndClose()
-
     ctx.channel().apply {
       attr(TAG).set(null)
       attr(TCP_CONTROL_ADDRESS).set(null)
       attr(BACK_TO_CLIENT_ADDRESS).set(null)
     }
+
+    ctx.flushAndClose()
   }
 
   override fun onChannelActive(ctx: ChannelHandlerContext) {

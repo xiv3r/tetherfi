@@ -122,14 +122,14 @@ private constructor(
       }
     }
 
-    ctx.flushAndClose()
-    getWritebackChannel(ctx)?.flushAndClose()
-
     ctx.channel().apply {
       attr(TAG).set(null)
       attr(WRITE_BACK_CHANNEL).set(null)
       attr(DIRECTION).set(null)
     }
+
+    ctx.flushAndClose()
+    getWritebackChannel(ctx)?.flushAndClose()
   }
 
   override fun onChannelActive(ctx: ChannelHandlerContext) {
