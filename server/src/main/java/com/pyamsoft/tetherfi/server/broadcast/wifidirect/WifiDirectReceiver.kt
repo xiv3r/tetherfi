@@ -47,6 +47,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import kotlin.time.Duration.Companion.seconds
 
 @Singleton
 internal class WifiDirectReceiver
@@ -165,14 +167,21 @@ internal constructor(
     // Use Default here instead of ProxyDispatcher
     receiverScope.launch(context = Dispatchers.Default) {
       try {
-        when (val action = intent.action) {
-          WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> handleStateChangedAction(intent)
-          WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> handleConnectionChangedAction(intent)
-          WifiP2pManager.WIFI_P2P_DISCOVERY_CHANGED_ACTION -> handleDiscoveryChangedAction()
-          WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> handlePeersChangedAction()
-          WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> handleThisDeviceChangedAction()
-          else -> {
-            Timber.w { "Unhandled intent action: $action" }
+        // In case this operation takes LONGER than 9.5 seconds,
+        // (limit could be 30 according to API specifics, but we force 10 to be safe)
+        // we bail and immediately
+        // mark the receiver as async finished
+        withTimeout(ASYNC_BROADCAST_RECEIVER_MAX_TIME) {
+          when (val action = intent.action) {
+            WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> handleStateChangedAction(intent)
+            WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION ->
+                handleConnectionChangedAction(intent)
+            WifiP2pManager.WIFI_P2P_DISCOVERY_CHANGED_ACTION -> handleDiscoveryChangedAction()
+            WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> handlePeersChangedAction()
+            WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> handleThisDeviceChangedAction()
+            else -> {
+              Timber.w { "Unhandled intent action: $action" }
+            }
           }
         }
       } finally {
@@ -185,6 +194,8 @@ internal constructor(
   }
 
   companion object {
+
+    private val ASYNC_BROADCAST_RECEIVER_MAX_TIME = 9.5.seconds
 
     @CheckResult
     private inline fun <reified T : Parcelable> Intent.resolveParcelableExtra(name: String): T? {
