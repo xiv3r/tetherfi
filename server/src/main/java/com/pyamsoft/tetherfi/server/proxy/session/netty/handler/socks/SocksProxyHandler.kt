@@ -40,13 +40,15 @@ import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
 import java.net.InetSocketAddress
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 internal abstract class SocksProxyHandler<T : SocksMessage>
 internal constructor(
     isDebug: Boolean,
     scope: CoroutineScope,
     serverSocketTimeout: ServerSocketTimeout,
-    allowedClients: AllowedClients,
+    private val allowedClients: AllowedClients,
     private val blockedClients: BlockedClients,
     private val tcpSocketCreator: ChannelCreator,
 ) :
@@ -131,6 +133,8 @@ internal constructor(
       sendFailureAndClose(ctx, msg)
       return
     }
+
+    scope.launch(context = Dispatchers.IO) { allowedClients.seen(client) }
 
     val connectSocket =
         tcpSocketCreator.connect(

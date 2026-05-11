@@ -55,15 +55,17 @@ import io.netty.handler.logging.LoggingHandler
 import io.netty.util.ReferenceCountUtil
 import java.net.InetSocketAddress
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 internal class Socks5ProxyHandler
 internal constructor(
     isDebug: Boolean,
     scope: CoroutineScope,
     clientResolver: ClientResolver,
-    allowedClients: AllowedClients,
     tcpSocketCreator: ChannelCreator,
     serverSocketTimeout: ServerSocketTimeout,
+    private val allowedClients: AllowedClients,
     private val blockedClients: BlockedClients,
     private val udpSocketCreator: ChannelCreator,
 ) :
@@ -105,6 +107,9 @@ internal constructor(
   private fun handleSocks5InitialRequest(ctx: ChannelHandlerContext) {
     // We do not care about auth
     ctx.writeAndFlush(DefaultSocks5InitialResponse(Socks5AuthMethod.NO_AUTH))
+
+    // Now that the initial decoder has self-removed, add the command decoder
+    ctx.pipeline().addBefore(ctx.name(), null, Socks5CommandRequestDecoder())
   }
 
   @LintIgnoreLongMethod
@@ -137,6 +142,8 @@ internal constructor(
       sendFailureAndClose(ctx, msg)
       return
     }
+
+    scope.launch(context = Dispatchers.IO) { allowedClients.seen(client) }
 
     Timber.d { "(${channelId}) $tag Register UDP for TCP control $tcpControlAddress" }
     val udpControl =
