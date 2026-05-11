@@ -259,11 +259,10 @@ internal constructor(
         }
       } catch (e: CancellationException) {
         // Create was canceled, clean up anything and rethrow
-        try {
-          removeGroup(channel)
-        } finally {
-          throw e
-        }
+        removeGroup(channel)
+
+        // Re-throw the cancellation exception
+        throw e
       }
     }
 
