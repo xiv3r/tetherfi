@@ -36,7 +36,6 @@ import io.netty.handler.codec.http.HttpServerCodec
 import io.netty.handler.codec.socksx.SocksVersion
 import io.netty.handler.codec.socksx.v4.Socks4ServerDecoder
 import io.netty.handler.codec.socksx.v4.Socks4ServerEncoder
-import io.netty.handler.codec.socksx.v5.Socks5CommandRequestDecoder
 import io.netty.handler.codec.socksx.v5.Socks5InitialRequestDecoder
 import io.netty.handler.codec.socksx.v5.Socks5ServerEncoder
 import io.netty.handler.logging.LogLevel
@@ -91,26 +90,11 @@ private constructor(
           serverSocketTimeout = serverSocketTimeout,
       )
 
-  private fun handleClientRequestSideEffects(
-      client: TetherClient,
-  ) {
-    // Mark all client connections as seen
-    //
-    // We need to do this because we have access to the MAC address via the GroupInfo.clientList
-    // but not the IP address. Android does not let us access the system ARP table so we cannot map
-    // MACs to IPs. Thus we need to basically hold our own table of "known" IP addresses and allow
-    // a user to block them as they see fit. This is UX wise, not great at all, since a user must
-    // eliminate a "bad" IP address by first knowing all the good ones.
-    //
-    // Though, arguably, blocking is only a nice to have. Real network security should be handled
-    // via the password.
-    allowedClients.seen(client)
-  }
-
   @LintIgnoreLongMethod
   override fun decode(ctx: ChannelHandlerContext, input: ByteBuf, out: List<Any>) {
     if (!input.isReadable) {
       Timber.w { "DROP: Unreadable input buffer sent." }
+      ctx.close()
       return
     }
 
@@ -119,6 +103,7 @@ private constructor(
     val writerIndex = input.writerIndex()
     if (writerIndex == readerIndex) {
       Timber.w { "DROP: Bad input writer index saw=$writerIndex expect=$readerIndex" }
+      ctx.close()
       return
     }
 
@@ -130,23 +115,25 @@ private constructor(
     val remoteClient = serverChannel.remoteAddress().cast<InetSocketAddress>()
     if (remoteClient == null) {
       Timber.w { "DROP: remoteClient IP is NULL" }
+      ctx.close()
       return
     }
 
     val remoteClientIpAddress = remoteClient.address.hostAddress
     if (remoteClientIpAddress == null) {
       Timber.w { "DROP: Could not resolve remoteClient.address.hostAddress" }
+      ctx.close()
       return
     }
 
     val client = clientResolver.ensure(remoteClientIpAddress)
-    scope.launch(context = Dispatchers.IO) { handleClientRequestSideEffects(client) }
 
     try {
       when (socksVersion) {
         SocksVersion.SOCKS4a -> {
           if (udpSocketCreator == null) {
             Timber.w { "DROP: SOCKS4a traffic received but SOCKS was not enabled" }
+            ctx.close()
             return
           }
 
@@ -174,6 +161,7 @@ private constructor(
           val udpControl = udpSocketCreator
           if (udpControl == null) {
             Timber.w { "DROP: SOCKS5 traffic received but SOCKS was not enabled" }
+            ctx.close()
             return
           }
 
@@ -184,7 +172,6 @@ private constructor(
           // Assume SOCKS5
           pipeline.addLast(Socks5ServerEncoder.DEFAULT)
           pipeline.addLast(Socks5InitialRequestDecoder())
-          pipeline.addLast(Socks5CommandRequestDecoder())
 
           // Bandwidth limiter
           pipeline.applyBandwidthLimitFor(client)
@@ -201,6 +188,7 @@ private constructor(
         else -> {
           if (!isHttpEnabled) {
             Timber.w { "DROP: HTTP traffic received but HTTP was not enabled" }
+            ctx.close()
             return
           }
 
