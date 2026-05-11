@@ -135,6 +135,7 @@ _run_detekt() {
     --jvm-target "$(_resolve_jvm_target_version)" \
     --fail-on-severity "Warning" \
     --parallel \
+    --excludes '**/build/**' \
     -i "${_inputs}"
   return 0
 }
