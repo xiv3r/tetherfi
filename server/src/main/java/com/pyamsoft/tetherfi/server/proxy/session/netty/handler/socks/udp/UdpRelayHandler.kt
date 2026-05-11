@@ -230,16 +230,7 @@ private constructor(
   }
 
   override fun sendErrorAndClose(ctx: ChannelHandlerContext, msg: Any) {
-    // Write a "0" response back to the UDP control channel
-    val response =
-        DefaultSocks5CommandResponse(
-            Socks5CommandStatus.FAILURE,
-            Socks5AddressType.IPv4,
-            "0.0.0.0",
-            0,
-        )
-
-    ctx.writeAndFlush(response).addListener { closeChannels(ctx) }
+    closeChannels(ctx)
   }
 
   override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
