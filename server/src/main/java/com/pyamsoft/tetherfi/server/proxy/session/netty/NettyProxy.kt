@@ -89,10 +89,15 @@ protected constructor(
   }
 
   @CheckResult
-  fun start(scope: CoroutineScope): NettyServerStopper {
+  fun start(): NettyServerStopper {
     // The boss group usually does not need more than a single thread allocated to it
     val bossGroup = MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory())
     val workerGroup = MultiThreadIoEventLoopGroup(NioIoHandler.newFactory())
+
+    val serverScope =
+        CoroutineScope(
+            context = SupervisorJob() + Dispatchers.IO + CoroutineName(this::class.java.name)
+        )
 
     val bootstrap =
         ServerBootstrap()
@@ -104,7 +109,7 @@ protected constructor(
             .childHandler(
                 object : ChannelInitializer<SocketChannel>() {
                   override fun initChannel(ch: SocketChannel) {
-                    channelInitialized(scope, ch)
+                    channelInitialized(serverScope, ch)
                   }
                 }
             )
@@ -114,11 +119,6 @@ protected constructor(
 
     val server = bootstrap.bind(host, port)
     val channel = server.channel()
-
-    val scope =
-        CoroutineScope(
-            context = SupervisorJob() + Dispatchers.IO + CoroutineName(this::class.java.name)
-        )
 
     channel.closeFuture().addListener {
       Timber.d { "Netty server is closing!" }
@@ -136,14 +136,14 @@ protected constructor(
       workerGroup.shutdownGracefully()
 
       Timber.d { "Closing server CoroutineScope" }
-      scope.cancel()
+      serverScope.cancel()
     }
 
     server.apply {
       addListener { future ->
         if (future.isSuccess) {
           Timber.d { "Netty server started" }
-          serverStarted(scope, channel, workerGroup)
+          serverStarted(serverScope, channel, workerGroup)
         } else {
           val err = future.cause()
           Timber.e(err) { "Failed to bind netty server" }

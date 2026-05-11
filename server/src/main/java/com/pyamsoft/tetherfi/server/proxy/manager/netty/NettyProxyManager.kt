@@ -48,7 +48,6 @@ protected constructor(
         val network = binder.getNetwork()
 
         coroutineScope {
-          val scope = this
           val server =
               provideProxy(
                   network = network,
@@ -59,7 +58,7 @@ protected constructor(
               )
 
           Timber.d { "Netty server started: ${hostConnection.hostName} $port" }
-          server.start(scope)
+          server.start()
           Timber.d { "Netty server stopped" }
         }
       }

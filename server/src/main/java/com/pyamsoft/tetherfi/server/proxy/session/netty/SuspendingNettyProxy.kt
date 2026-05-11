@@ -29,20 +29,20 @@ abstract class SuspendingNettyProxy internal constructor() {
 
   private val proxy by lazy { provideProxy() }
 
-  private suspend fun startProxy(scope: CoroutineScope) {
+  private suspend fun startProxy() {
     var stopper: NettyServerStopper? = null
     try {
-      stopper = proxy.start(scope)
+      stopper = proxy.start()
       awaitCancellation()
     } finally {
       withContext(context = NonCancellable) { stopper?.also { s -> s.stop() } }
     }
   }
 
-  suspend fun start(scope: CoroutineScope) {
+  suspend fun start() {
     if (started.compareAndSet(expect = false, update = true)) {
       try {
-        startProxy(scope)
+        startProxy()
       } finally {
         withContext(context = NonCancellable) {
           started.compareAndSet(expect = true, update = false)
