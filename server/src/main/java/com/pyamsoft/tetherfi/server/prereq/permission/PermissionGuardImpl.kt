@@ -42,8 +42,7 @@ internal constructor(
   }
 
   override val requiredPermissions: List<String> by lazy {
-    // Always require these WiFi permissions
-    ALWAYS_PERMISSIONS + WIFI_NEARBY_PERMISSIONS
+    ALWAYS_PERMISSIONS + WIFI_NEARBY_PERMISSIONS + LOCAL_NETWORK_PERMISSIONS
   }
 
   override suspend fun canCreateNetwork(): Boolean =
@@ -73,5 +72,16 @@ internal constructor(
               android.Manifest.permission.NEARBY_WIFI_DEVICES,
           )
         }
+
+    private val LOCAL_NETWORK_PERMISSIONS =
+      // On API >= 37, we require location permission
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
+        listOf(
+          android.Manifest.permission.ACCESS_LOCAL_NETWORK,
+        )
+      } else {
+        // Nothing needed on lower
+        emptyList()
+      }
   }
 }

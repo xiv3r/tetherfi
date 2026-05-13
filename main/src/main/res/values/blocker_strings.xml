@@ -46,6 +46,7 @@
   <string name="block_permission_grant">Grant</string>
   <string name="block_permission_type_location">PRECISE LOCATION</string>
   <string name="block_permission_type_nearby">NEARBY WIFI</string>
+  <string name="block_permission_type_local_network">LOCAL NETWORK</string>
 
   <string name="block_background_data_open_settings">Open Settings</string>
 

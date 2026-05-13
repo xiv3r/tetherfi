@@ -41,6 +41,12 @@
     tools:targetApi="s"
   />
 
+  <!-- On SDK >= 37, we can use the new ACCESS_LOCAL_NETWORK permissions -->
+  <uses-permission
+    android:name="android.permission.ACCESS_LOCAL_NETWORK"
+    tools:targetApi="cinnamon_bun"
+  />
+
   <!-- For VpnChecker -->
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 

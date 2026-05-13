@@ -27,10 +27,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.pyamsoft.pydroid.theme.keylines
@@ -52,18 +50,19 @@ internal fun PermissionBlocker(
     onOpenPermissionSettings: () -> Unit,
     onRequestPermissions: () -> Unit,
 ) {
-  val context = LocalContext.current
   val hapticManager = LocalHapticManager.current
 
   // Permission needed is different on T
-  val neededPermission =
-      remember(context) {
+  val locationPermission =
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-          context.getString(R.string.block_permission_type_location)
+          stringResource(R.string.block_permission_type_location)
         } else {
-          context.getString(R.string.block_permission_type_nearby)
+          stringResource(R.string.block_permission_type_nearby)
         }
-      }
+
+  val localNetworkPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
+    stringResource(R.string.block_permission_type_local_network)
+  } else ""
 
   CardDialog(
       modifier = modifier,
@@ -91,9 +90,19 @@ internal fun PermissionBlocker(
             modifier =
                 Modifier.padding(horizontal = MaterialTheme.keylines.content)
                     .padding(top = MaterialTheme.keylines.content),
-            text = stringResource(R.string.block_permission_description, appName, neededPermission),
+            text = stringResource(R.string.block_permission_description, appName, locationPermission),
             style = MaterialTheme.typography.bodyLarge,
         )
+
+        if (localNetworkPermission.isNotBlank()) {
+          Text(
+            modifier =
+              Modifier.padding(horizontal = MaterialTheme.keylines.content)
+                .padding(top = MaterialTheme.keylines.baseline),
+            text = stringResource(R.string.block_permission_description, appName, localNetworkPermission),
+            style = MaterialTheme.typography.bodyLarge,
+          )
+        }
       }
 
       item(
