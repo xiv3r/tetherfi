@@ -22,7 +22,7 @@ timber = "5.0.1"
 
 qrCode = "4.5.0"
 dagger = "2.59.2"
-netty = "4.2.13.Final"
+netty = "4.2.14.Final"
 # Silence SLF4J logging warnings
 slf4j = "2.0.18"
 
