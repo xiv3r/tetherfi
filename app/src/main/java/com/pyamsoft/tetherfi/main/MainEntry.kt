@@ -19,7 +19,6 @@ package com.pyamsoft.tetherfi.main
 import android.provider.Settings
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.PagerState
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,7 +41,6 @@ import com.pyamsoft.tetherfi.core.Timber
 import com.pyamsoft.tetherfi.qr.QRCodeEntry
 import com.pyamsoft.tetherfi.server.broadcast.BroadcastNetworkStatus
 import com.pyamsoft.tetherfi.server.status.RunningStatus
-import com.pyamsoft.tetherfi.settings.SettingsDialog
 import com.pyamsoft.tetherfi.status.PermissionRequests
 import com.pyamsoft.tetherfi.status.PermissionResponse
 import com.pyamsoft.tetherfi.ui.LANDSCAPE_MAX_WIDTH
@@ -162,6 +160,8 @@ private fun MountHooks(
 fun MainEntry(
     modifier: Modifier = Modifier,
     appName: String,
+    allTabs: List<MainView>,
+    pagerState: PagerState,
 
     // Action
     onShowInAppRating: () -> Unit,
@@ -175,7 +175,6 @@ fun MainEntry(
   val scope = rememberCoroutineScope()
   val component = rememberComposableInjector { MainInjector() }
   val viewModel = rememberNotNull(component.viewModel)
-  val appEnvironment = rememberNotNull(component.appEnvironment)
   val permissionRequestBus = rememberNotNull(component.permissionRequestBus)
   val permissionResponseBus = rememberNotNull(component.permissionResponseBus)
 
@@ -186,14 +185,6 @@ fun MainEntry(
   // so that the scope does not die because of navigation events
   val owner = LocalLifecycleOwner.current
   val lifecycleScope = owner.lifecycleScope
-
-  val allTabs = rememberAllTabs()
-  val pagerState =
-      rememberPagerState(
-          initialPage = 0,
-          initialPageOffsetFraction = 0F,
-          pageCount = { allTabs.size },
-      )
 
   val handleTabSelected by rememberUpdatedState { tab: MainView ->
     // Click fires the index to update
@@ -219,7 +210,6 @@ fun MainEntry(
       pagerState = pagerState,
       allTabs = allTabs,
       onTabChanged = { handleTabSelected(it) },
-      onSettingsOpen = { viewModel.handleOpenDialog(MainViewDialogs.SETTINGS) },
       onShowQRCode = { viewModel.handleOpenDialog(MainViewDialogs.QR_CODE) },
       onRefreshConnection = { viewModel.handleRefreshConnectionInfo(scope) },
       onJumpToHowTo = { handleTabSelected(MainView.INFO) },
@@ -261,19 +251,6 @@ fun MainEntry(
         onLaunchIntent(Settings.ACTION_IGNORE_BACKGROUND_DATA_RESTRICTIONS_SETTINGS)
       },
   )
-
-  val isSettingsOpen by viewModel.isSettingsOpen.collectAsStateWithLifecycle()
-  if (isSettingsOpen) {
-    SettingsDialog(
-        modifier =
-            Modifier.fillUpToPortraitSize()
-                .widthIn(
-                    max = LANDSCAPE_MAX_WIDTH,
-                ),
-        appEnvironment = appEnvironment,
-        onDismiss = { viewModel.handleCloseDialog(MainViewDialogs.SETTINGS) },
-    )
-  }
 
   val isShowingQRCodeDialog by viewModel.isShowingQRCodeDialog.collectAsStateWithLifecycle()
   if (isShowingQRCodeDialog) {

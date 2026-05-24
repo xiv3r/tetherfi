@@ -24,8 +24,6 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.ZeroCornerSize
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -45,8 +43,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.pyamsoft.pydroid.theme.keylines
-import com.pyamsoft.pydroid.ui.haptics.LocalHapticManager
-import com.pyamsoft.tetherfi.ui.icons.IconPainters
 
 @Composable
 @CheckResult
@@ -61,11 +57,8 @@ fun MainTopBar(
     appName: String,
     pagerState: PagerState,
     allTabs: List<MainView>,
-    onSettingsOpen: () -> Unit,
     onTabChanged: (MainView) -> Unit,
 ) {
-  val hapticManager = LocalHapticManager.current
-
   Surface(
       modifier = modifier,
       contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -91,19 +84,6 @@ fun MainTopBar(
             Text(
                 text = appName,
             )
-          },
-          actions = {
-            IconButton(
-                onClick = {
-                  hapticManager?.actionButtonPress()
-                  onSettingsOpen()
-                },
-            ) {
-              Icon(
-                  painter = IconPainters.settings(),
-                  contentDescription = "Open Settings",
-              )
-            }
           },
       )
 
@@ -184,7 +164,6 @@ private fun PreviewMainTopBar() {
               pageCount = { allTabs.size },
           ),
       allTabs = allTabs,
-      onSettingsOpen = {},
       onTabChanged = {},
   )
 }

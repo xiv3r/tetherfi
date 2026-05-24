@@ -21,7 +21,6 @@ import com.pyamsoft.pydroid.bus.EventBus
 import com.pyamsoft.pydroid.bus.EventConsumer
 import com.pyamsoft.pydroid.ui.inject.ComposableInjector
 import com.pyamsoft.tetherfi.ObjectGraph
-import com.pyamsoft.tetherfi.core.AppDevEnvironment
 import com.pyamsoft.tetherfi.core.ExperimentalRuntimeFlags
 import com.pyamsoft.tetherfi.status.PermissionRequests
 import com.pyamsoft.tetherfi.status.PermissionResponse
@@ -30,8 +29,6 @@ import javax.inject.Inject
 internal class MainInjector @Inject internal constructor() : ComposableInjector() {
 
   @JvmField @Inject internal var viewModel: MainViewModeler? = null
-
-  @JvmField @Inject internal var appEnvironment: AppDevEnvironment? = null
   @JvmField @Inject internal var permissionRequestBus: EventBus<PermissionRequests>? = null
   @JvmField @Inject internal var permissionResponseBus: EventConsumer<PermissionResponse>? = null
   @JvmField @Inject internal var experimentalRuntimeFlags: ExperimentalRuntimeFlags? = null
@@ -42,7 +39,6 @@ internal class MainInjector @Inject internal constructor() : ComposableInjector(
 
   override fun onDispose() {
     viewModel = null
-    appEnvironment = null
     permissionRequestBus = null
     permissionResponseBus = null
     experimentalRuntimeFlags = null

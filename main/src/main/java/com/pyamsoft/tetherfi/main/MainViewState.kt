@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 enum class MainViewDialogs {
-  SETTINGS,
   QR_CODE,
   SLOW_SPEED_HELP,
   SETUP_ERROR,
@@ -43,7 +42,6 @@ enum class MainViewDialogs {
 interface MainViewState : ServerViewState {
 
   // Dialogs
-  val isSettingsOpen: StateFlow<Boolean>
   val isShowingQRCodeDialog: StateFlow<Boolean>
   val isShowingSlowSpeedHelp: StateFlow<Boolean>
 
@@ -79,7 +77,6 @@ class MutableMainViewState @Inject internal constructor() : MainViewState {
   override val broadcastType = MutableStateFlow<BroadcastType?>(null)
   override val preferredNetwork = MutableStateFlow<PreferredNetwork?>(null)
 
-  override val isSettingsOpen = MutableStateFlow(false)
   override val isShowingQRCodeDialog = MutableStateFlow(false)
   override val isShowingSlowSpeedHelp = MutableStateFlow(false)
 

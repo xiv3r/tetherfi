@@ -14,14 +14,19 @@
  * limitations under the License.
  */
 
-package com.pyamsoft.tetherfi.main
+package com.pyamsoft.tetherfi.settings
 
-import androidx.annotation.StringRes
+import androidx.annotation.CheckResult
+import dagger.Subcomponent
 
-enum class MainView(@param:StringRes val displayNameRes: Int) {
-  STATUS(R.string.main_tab_name_status),
-  BEHAVIOR(R.string.main_tab_name_behavior),
-  INFO(R.string.main_tab_name_info),
-  CONNECTIONS(R.string.main_tab_name_connections),
-  SETTINGS(R.string.main_tab_name_settings),
+@Subcomponent
+internal interface SettingsComponent {
+
+  fun inject(injector: SettingsInjector)
+
+  @Subcomponent.Factory
+  interface Factory {
+
+    @CheckResult fun create(): SettingsComponent
+  }
 }

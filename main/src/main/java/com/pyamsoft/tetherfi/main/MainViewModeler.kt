@@ -281,7 +281,6 @@ internal constructor(
       mutableListOf<SaveableStateRegistry.Entry>().apply {
         val s = state
 
-        registry.registerProvider(KEY_IS_SETTINGS_OPEN) { s.isSettingsOpen.value }.also { add(it) }
         registry
             .registerProvider(KEY_IS_SHOWING_QR) { s.isShowingQRCodeDialog.value }
             .also { add(it) }
@@ -305,9 +304,6 @@ internal constructor(
 
   override fun consumeRestoredState(registry: SaveableStateRegistry) {
     val s = state
-    registry.consumeRestored(KEY_IS_SETTINGS_OPEN)?.cast<Boolean>()?.also {
-      s.isSettingsOpen.value = it
-    }
 
     registry.consumeRestored(KEY_IS_SHOWING_QR)?.cast<Boolean>()?.also {
       s.isShowingQRCodeDialog.value = it
@@ -351,9 +347,6 @@ internal constructor(
 
   fun handleOpenDialog(dialog: MainViewDialogs) =
       when (dialog) {
-        MainViewDialogs.SETTINGS -> {
-          state.isSettingsOpen.value = true
-        }
         MainViewDialogs.QR_CODE -> {
           // If the hotspot is valid, we will have this from the group
           val isHotspotDataValid = state.group.value is BroadcastNetworkStatus.GroupInfo.Connected
@@ -381,9 +374,6 @@ internal constructor(
 
   fun handleCloseDialog(dialog: MainViewDialogs) =
       when (dialog) {
-        MainViewDialogs.SETTINGS -> {
-          state.isSettingsOpen.value = false
-        }
         MainViewDialogs.QR_CODE -> {
           state.isShowingQRCodeDialog.value = false
         }
@@ -478,7 +468,6 @@ internal constructor(
 
   companion object {
 
-    private const val KEY_IS_SETTINGS_OPEN = "is_settings_open"
     private const val KEY_IS_SHOWING_QR = "show_qr"
     private const val KEY_SHOW_SLOW_SPEED_HELP = "key_show_slow_speed_help"
 

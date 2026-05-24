@@ -22,6 +22,7 @@ import com.pyamsoft.tetherfi.connections.ConnectionComponent
 import com.pyamsoft.tetherfi.core.ActivityScope
 import com.pyamsoft.tetherfi.info.InfoComponent
 import com.pyamsoft.tetherfi.qr.QRCodeComponent
+import com.pyamsoft.tetherfi.settings.SettingsComponent
 import com.pyamsoft.tetherfi.status.StatusComponent
 import dagger.Subcomponent
 
@@ -38,6 +39,8 @@ internal interface MainComponent {
   @CheckResult fun plusInfo(): InfoComponent.Factory
 
   @CheckResult fun plusQR(): QRCodeComponent.Factory
+
+  @CheckResult fun plusSettings(): SettingsComponent.Factory
 
   fun inject(activity: MainActivity)
 

@@ -20,4 +20,5 @@
   <string name="main_tab_name_behavior">Behavior</string>
   <string name="main_tab_name_info">Info</string>
   <string name="main_tab_name_connections">Connections</string>
+  <string name="main_tab_name_settings">Settings</string>
 </resources>
