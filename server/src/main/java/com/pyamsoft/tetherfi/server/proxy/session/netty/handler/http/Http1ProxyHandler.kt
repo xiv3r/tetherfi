@@ -269,55 +269,54 @@ private constructor(
 
     // We start up a future listener here
     future.addListener { future ->
-      try {
-        if (!future.isSuccess) {
-          Timber.e(future.cause()) { "(${channelId}) $tag Unable to connect to $parsed" }
-          sendErrorAndClose(ctx, retained)
-          return@addListener
-        }
-
-        // Enable auto-read once connection is established
-        serverChannel.config().isAutoRead = true
-
-        // Drop down to raw TCP
-        val pipeline = ctx.pipeline()
-
-        // Remove our own handler
-        pipeline.dropHandler(this::class)
-
-        // Bandwidth limiter
-        pipeline.applyBandwidthLimitFor(client)
-
-        // Read from the PROXY and send to the remote
-        pipeline.addLast(relayHandlerFactory.create(Unit))
-
-        RelayHandler.applyChannelAttributes(
-            channel = serverChannel,
-            writeBackChannel = outbound,
-            tag = "$tag-OUTBOUND-${parsed.resolvedHostName}:${parsed.resolvedPort}",
-            direction = RelayHandler.Direction.OUTBOUND,
-            client = client,
-        )
-
-        // Then establish connection
-        Timber.d { "(${channelId}) Write $tag to $parsed" }
-
-        // Tell proxy we've established connection
-        //
-        // Write here claims the msg
-        ctx.writeAndFlush(
-                DefaultFullHttpResponse(
-                    HttpVersion.HTTP_1_1,
-                    HttpResponseStatus.OK,
-                )
-            )
-            .addListener {
-              // Remove the http server codec only after 200 OK is fully written
-              pipeline.dropHandler(HttpServerCodec::class)
-            }
-      } finally {
-        ReferenceCountUtil.release(retained)
+      if (!future.isSuccess) {
+        Timber.e(future.cause()) { "(${channelId}) $tag Unable to connect to $parsed" }
+        sendErrorAndClose(ctx, retained)
+        return@addListener
       }
+
+      // We are done with the original message at this point and can release it
+      ReferenceCountUtil.release(retained)
+
+      // Enable auto-read once connection is established
+      serverChannel.config().isAutoRead = true
+
+      // Drop down to raw TCP
+      val pipeline = ctx.pipeline()
+
+      // Remove our own handler
+      pipeline.dropHandler(this::class)
+
+      // Bandwidth limiter
+      pipeline.applyBandwidthLimitFor(client)
+
+      // Read from the PROXY and send to the remote
+      pipeline.addLast(relayHandlerFactory.create(Unit))
+
+      RelayHandler.applyChannelAttributes(
+          channel = serverChannel,
+          writeBackChannel = outbound,
+          tag = "$tag-OUTBOUND-${parsed.resolvedHostName}:${parsed.resolvedPort}",
+          direction = RelayHandler.Direction.OUTBOUND,
+          client = client,
+      )
+
+      // Then establish connection
+      Timber.d { "(${channelId}) Write $tag to $parsed" }
+
+      // Tell proxy we've established connection
+      //
+      // Write here claims the msg
+      ctx.writeAndFlush(
+              DefaultFullHttpResponse(
+                  HttpVersion.HTTP_1_1,
+                  HttpResponseStatus.OK,
+              )
+          )
+          .addListener {
+            // Remove the http server codec only after 200 OK is fully written
+            pipeline.dropHandler(HttpServerCodec::class)
+          }
     }
   }
 
@@ -441,58 +440,55 @@ private constructor(
     // Original message is done at this point
     ReferenceCountUtil.release(msg)
 
+    // No try/finally — ownership is tracked per-branch.
     future.addListener { future ->
-      try {
-        if (!future.isSuccess) {
-          Timber.e(future.cause()) { "Unable to connect to $parsed" }
-          sendErrorAndClose(ctx, msg)
-          return@addListener
-        }
+      if (!future.isSuccess) {
+        Timber.e(future.cause()) { "Unable to connect to $parsed" }
+        sendErrorAndClose(ctx, retained)
+        return@addListener
+      }
 
-        // Enable auto-read once connection is established
-        serverChannel.config().isAutoRead = true
+      // Enable auto-read once connection is established
+      serverChannel.config().isAutoRead = true
 
-        // Drop down to raw TCP
-        val pipeline = ctx.pipeline()
+      // Drop down to raw TCP
+      val pipeline = ctx.pipeline()
 
-        // Remove our own handler
-        pipeline.dropHandler(this::class)
+      // Remove our own handler
+      pipeline.dropHandler(this::class)
 
-        // Bandwidth limiter
-        pipeline.applyBandwidthLimitFor(client)
+      // Bandwidth limiter
+      pipeline.applyBandwidthLimitFor(client)
 
-        // Read from the PROXY and send to REMOTE
-        pipeline.addLast(relayHandlerFactory.create(Unit))
+      // Read from the PROXY and send to REMOTE
+      pipeline.addLast(relayHandlerFactory.create(Unit))
 
-        RelayHandler.applyChannelAttributes(
-            channel = serverChannel,
-            writeBackChannel = outbound,
-            tag = "$tag-OUTBOUND-${parsed.resolvedHostName}:${parsed.resolvedPort}",
-            direction = RelayHandler.Direction.OUTBOUND,
-            client = client,
-        )
+      RelayHandler.applyChannelAttributes(
+          channel = serverChannel,
+          writeBackChannel = outbound,
+          tag = "$tag-OUTBOUND-${parsed.resolvedHostName}:${parsed.resolvedPort}",
+          direction = RelayHandler.Direction.OUTBOUND,
+          client = client,
+      )
 
-        // Replay the initial request
-        Timber.d { "($channelId) Forward connect to $parsed" }
+      // Replay the initial request
+      Timber.d { "($channelId) Forward connect to $parsed" }
 
-        // Write here claims the msg
-        // msg.refCount = 0
-        outbound.writeAndFlush(retained).addListener {
-          // Hold onto this channel for future requests to immediately fire off to it
-          assignOutboundChannel(outbound)
+      // Success: writeAndFlush transfers ownership of retained to Netty.
+      // Netty releases retained after encoding — do NOT release again.
+      outbound.writeAndFlush(retained).addListener {
+        // Hold onto this channel for future requests to immediately fire off to it
+        assignOutboundChannel(outbound)
 
-          // And then replay any previously seen messages that arrived BEFORE we were set up
-          // any future messages will go directly to the outbound now that the channel is held
-          replayQueuedMessages(outbound)
+        // And then replay any previously seen messages that arrived BEFORE we were set up
+        // any future messages will go directly to the outbound now that the channel is held
+        replayQueuedMessages(outbound)
 
-          // All messages have been replayed, drop the client codec
-          outbound.pipeline().dropHandler(HttpClientCodec::class)
+        // All messages have been replayed, drop the client codec
+        outbound.pipeline().dropHandler(HttpClientCodec::class)
 
-          // Remove the http server codec
-          pipeline.dropHandler(HttpServerCodec::class)
-        }
-      } finally {
-        ReferenceCountUtil.release(retained)
+        // Remove the http server codec
+        pipeline.dropHandler(HttpServerCodec::class)
       }
     }
   }
@@ -526,12 +522,9 @@ private constructor(
   }
 
   override fun sendErrorAndClose(ctx: ChannelHandlerContext, msg: Any) {
-    // Msg creation point, response.refCount = 1
-    val response = createHttpErrorResponse()
-
     // Write here claims the msg
     // response.refCount = 0
-    ctx.writeAndFlush(response).addListener { closeChannels(ctx) }
+    ctx.writeAndFlush(createHttpErrorResponse()).addListener { closeChannels(ctx) }
 
     // We should also release the original msg
     ReferenceCountUtil.release(msg)
