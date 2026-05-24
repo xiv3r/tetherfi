@@ -140,18 +140,22 @@ internal constructor(
     private const val IPV4_LOCALHOST_BYTE_IDENTIFIER = 127.toByte()
     private val IPV6_LOCALHOST_BYTE_ARRAY =
         byteArrayOf(
+            // First four
             0,
             0,
             0,
             0,
+            // Second four
             0,
             0,
             0,
             0,
+            // third four
             0,
             0,
             0,
             0,
+            // blah blah blah 1 right?
             0,
             0,
             0,
