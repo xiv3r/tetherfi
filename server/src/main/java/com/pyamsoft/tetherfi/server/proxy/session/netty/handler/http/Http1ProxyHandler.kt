@@ -416,6 +416,9 @@ private constructor(
       headers.remove(HttpHeaderNames.PROXY_AUTHENTICATE)
       headers.remove(HttpHeaderNames.PROXY_AUTHORIZATION)
 
+      // Force Host to match the URI target, not whatever the client sent
+      headers.set(HttpHeaderNames.HOST, parsed.resolvedHostName)
+
       // Enable auto-read once connection is established
       serverChannel.config().isAutoRead = true
 
