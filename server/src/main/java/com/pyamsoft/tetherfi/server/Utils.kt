@@ -31,15 +31,15 @@ val IPV4_ADDRESS_REGEX =
 
 @CheckResult
 fun isIp4Address(hostOrIp: String): Boolean {
-    return IPV4_ADDRESS_REGEX.matches(hostOrIp)
+  return IPV4_ADDRESS_REGEX.matches(hostOrIp)
 }
 
 @CheckResult
 fun isIp6Address(hostOrIp: String): Boolean {
-    return hostOrIp.contains(':')
+  return hostOrIp.contains(':')
 }
 
 @CheckResult
 fun isIpAddress(hostOrIp: String): Boolean {
-    return isIp4Address(hostOrIp) || isIp6Address(hostOrIp)
+  return isIp4Address(hostOrIp) || isIp6Address(hostOrIp)
 }

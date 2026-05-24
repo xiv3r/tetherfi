@@ -138,12 +138,25 @@ internal constructor(
     private const val CONNECTION_RESET_MESSAGE = "Connection reset by peer"
 
     private const val IPV4_LOCALHOST_BYTE_IDENTIFIER = 127.toByte()
-    private val IPV6_LOCALHOST_BYTE_ARRAY = byteArrayOf(
-      0, 0, 0, 0,
-      0, 0, 0, 0,
-      0, 0, 0, 0,
-      0, 0, 0, 1,
-    )
+    private val IPV6_LOCALHOST_BYTE_ARRAY =
+        byteArrayOf(
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+        )
 
     @JvmStatic protected val VALID_PORT_RANGE = 1..65535
 
@@ -160,16 +173,15 @@ internal constructor(
       return when (bytes.size) {
         // IPv4 - is this a 127.X.X.X
         4 -> bytes[0] == IPV4_LOCALHOST_BYTE_IDENTIFIER
-        // IPv6 - is this ::1 (covered by the if statement but just in case this logic changes in the future?)
+        // IPv6 - is this ::1 (covered by the if statement but just in case this logic changes in
+        // the future?)
         16 -> bytes.contentEquals(IPV6_LOCALHOST_BYTE_ARRAY)
         // What the fuck lol
         else -> false
       }
     }
 
-    /**
-     * Block localhost and localdomain addressing
-     */
+    /** Block localhost and localdomain addressing */
     @CheckResult
     private fun isLocalBlockedAddress(ipLiteral: String): Boolean {
       val bytes = NetUtil.createByteArrayFromIpAddressString(ipLiteral)
@@ -192,9 +204,7 @@ internal constructor(
       return address.isLoopbackAddress || address.isAnyLocalAddress
     }
 
-    /**
-     * Sending traffic to the localhost is NOT a valid destination
-     */
+    /** Sending traffic to the localhost is NOT a valid destination */
     @JvmStatic
     @CheckResult
     protected fun isBlockedLocalAddress(hostOrIp: String): Boolean {

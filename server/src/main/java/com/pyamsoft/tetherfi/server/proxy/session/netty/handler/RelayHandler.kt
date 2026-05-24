@@ -171,72 +171,73 @@ private constructor(
     ReferenceCountUtil.release(msg)
   }
 
-  override fun channelRead(ctx: ChannelHandlerContext, msg: Any) =releaseMsgOnChannelReadError(msg) {
-    // Inbound point, msg.refCount = 1
-    ensureChannelTag(ctx)
-    val channelId = getChannelId()
+  override fun channelRead(ctx: ChannelHandlerContext, msg: Any) =
+      releaseMsgOnChannelReadError(msg) {
+        // Inbound point, msg.refCount = 1
+        ensureChannelTag(ctx)
+        val channelId = getChannelId()
 
-    val writeToChannel = getWritebackChannel(ctx)
-    if (writeToChannel == null) {
-      Timber.w { "($channelId): channelRead writeToChannel is NULL" }
+        val writeToChannel = getWritebackChannel(ctx)
+        if (writeToChannel == null) {
+          Timber.w { "($channelId): channelRead writeToChannel is NULL" }
 
-      // This will release the message
-      // msg.refCount = 0
-      sendErrorAndClose(ctx, msg)
-      return@releaseMsgOnChannelReadError
-    }
+          // This will release the message
+          // msg.refCount = 0
+          sendErrorAndClose(ctx, msg)
+          return@releaseMsgOnChannelReadError
+        }
 
-    if (!writeToChannel.isActive) {
-      Timber.w { "($channelId): channelRead writeToChannel is not active" }
+        if (!writeToChannel.isActive) {
+          Timber.w { "($channelId): channelRead writeToChannel is not active" }
 
-      // This will release the message
-      // msg.refCount = 0
-      sendErrorAndClose(ctx, msg)
-      return@releaseMsgOnChannelReadError
-    }
+          // This will release the message
+          // msg.refCount = 0
+          sendErrorAndClose(ctx, msg)
+          return@releaseMsgOnChannelReadError
+        }
 
-    val bytes = msg.cast<ByteBuf>()
-    if (bytes == null) {
-      Timber.w { "($channelId): channelRead msg was not ByteBuf" }
+        val bytes = msg.cast<ByteBuf>()
+        if (bytes == null) {
+          Timber.w { "($channelId): channelRead msg was not ByteBuf" }
 
-      // This will release the message
-      // msg.refCount = 0
-      sendErrorAndClose(ctx, msg)
-      return@releaseMsgOnChannelReadError
-    }
+          // This will release the message
+          // msg.refCount = 0
+          sendErrorAndClose(ctx, msg)
+          return@releaseMsgOnChannelReadError
+        }
 
-    val client = getTetherClient(ctx)
-    if (client == null) {
-      Timber.w { "($channelId) DROP: TetherClient is NULL" }
+        val client = getTetherClient(ctx)
+        if (client == null) {
+          Timber.w { "($channelId) DROP: TetherClient is NULL" }
 
-      // This will release the message
-      // msg.refCount = 0
-      sendErrorAndClose(ctx, msg)
-      return@releaseMsgOnChannelReadError
-    }
+          // This will release the message
+          // msg.refCount = 0
+          sendErrorAndClose(ctx, msg)
+          return@releaseMsgOnChannelReadError
+        }
 
-    // If the client is blocked we do not process any input
-    if (blockedClients.isBlocked(client)) {
-      Timber.w { "($channelId) DROP: client was blocked: $client" }
+        // If the client is blocked we do not process any input
+        if (blockedClients.isBlocked(client)) {
+          Timber.w { "($channelId) DROP: client was blocked: $client" }
 
-      // This will release the message
-      // msg.refCount = 0
-      sendErrorAndClose(ctx, msg)
-      return@releaseMsgOnChannelReadError
-    }
+          // This will release the message
+          // msg.refCount = 0
+          sendErrorAndClose(ctx, msg)
+          return@releaseMsgOnChannelReadError
+        }
 
-    scope.launch(context = Dispatchers.IO) { allowedClients.seen(client) }
+        scope.launch(context = Dispatchers.IO) { allowedClients.seen(client) }
 
-    // Grab the amount BEFORE the data buffer is released
-    val amountMoved = bytes.readableBytes()
+        // Grab the amount BEFORE the data buffer is released
+        val amountMoved = bytes.readableBytes()
 
-    // Keep count
-    bytesMoved.addAndGet(amountMoved)
+        // Keep count
+        bytesMoved.addAndGet(amountMoved)
 
-    // Write here claims the msg
-    // msg.refCount = 0
-    writeToChannel.writeAndFlush(bytes)
-  }
+        // Write here claims the msg
+        // msg.refCount = 0
+        writeToChannel.writeAndFlush(bytes)
+      }
 
   override fun channelWritabilityChanged(ctx: ChannelHandlerContext) {
     try {

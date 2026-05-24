@@ -74,14 +74,14 @@ internal constructor(
         }
 
     private val LOCAL_NETWORK_PERMISSIONS =
-      // On API >= 37, we require location permission
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
-        listOf(
-          android.Manifest.permission.ACCESS_LOCAL_NETWORK,
-        )
-      } else {
-        // Nothing needed on lower
-        emptyList()
-      }
+        // On API >= 37, we require location permission
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
+          listOf(
+              android.Manifest.permission.ACCESS_LOCAL_NETWORK,
+          )
+        } else {
+          // Nothing needed on lower
+          emptyList()
+        }
   }
 }

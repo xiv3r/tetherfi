@@ -211,7 +211,8 @@ private constructor(
     } finally {
       pipeline.dropHandler(this::class)
 
-      // DO NOT release the `input` here as it will be passed down the chain eventually to the added handler
+      // DO NOT release the `input` here as it will be passed down the chain eventually to the added
+      // handler
     }
   }
 
