@@ -31,6 +31,6 @@
 
   <string name="operating_new_engine_title">Use New Engine</string>
   <string name="operating_new_engine_description">
-    This will make %1$s use a new Netty based proxy engine for handling connections. This new engine is currently a work in progress and is expected to become the only supported engine in future versions. Currently, it is opt-in, but will become the default in the future.
+    This will make %1$s use a new Netty based proxy engine for handling connections. This new engine is the current default and will become the only supported engine in the next version.
   </string>
 </resources>

@@ -85,14 +85,13 @@ class MainActivity : ComponentActivity() {
                     // Off.")
                     @LintIgnoreMaxLineLength
                     feature(
-                        "New Netty based engine for HTTP proxy. The new engine is OFF by default. You must opt-in to use it. It will become the default in the next version"
+                        "New Netty based engine for HTTP proxy. The new engine is ON by default, and will become the ONLY engine in the next version."
                     )
 
                     @LintIgnoreMaxLineLength
                     feature(
-                        "New Netty based engine for SOCKS proxy. The new engine is OFF by default. You must opt-in to use it. It will become the default in the next version"
+                        "New Netty based engine for SOCKS proxy. The new engine is ON by default, and will become the ONLY engine in the next version."
                     )
-                    bugfix("Fix an issue where Wi-Fi Direct SSID could be longer than 32 bytes.")
                   }
                 },
         )
