@@ -24,8 +24,8 @@ import com.pyamsoft.tetherfi.server.clients.AllowedClients
 import com.pyamsoft.tetherfi.server.clients.BlockedClients
 import com.pyamsoft.tetherfi.server.clients.ByteTransferReport
 import com.pyamsoft.tetherfi.server.clients.TetherClient
-import io.ktor.util.network.address
-import io.ktor.util.network.port
+import com.pyamsoft.tetherfi.server.proxy.session.address
+import com.pyamsoft.tetherfi.server.proxy.session.port
 import io.netty.buffer.ByteBuf
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext

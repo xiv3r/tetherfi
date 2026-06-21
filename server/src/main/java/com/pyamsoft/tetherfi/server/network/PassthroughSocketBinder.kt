@@ -18,8 +18,8 @@ package com.pyamsoft.tetherfi.server.network
 
 import android.net.Network
 import com.pyamsoft.tetherfi.core.Timber
-import io.ktor.network.sockets.Socket
 import java.net.DatagramSocket
+import java.net.Socket
 import javax.inject.Inject
 import javax.inject.Singleton
 

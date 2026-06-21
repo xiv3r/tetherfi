@@ -14,7 +14,6 @@ coroutines = "1.11.0"
 
 # Us
 pydroid = "29.5.1"
-ktor = "3.4.0-PYAMSOFT"
 
 # Square
 leakCanary = "2.14"
@@ -94,10 +93,6 @@ dagger-compiler = { group = "com.google.dagger", name = "dagger-compiler", versi
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
 kotlinx-coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
-
-# TODO(Peter): NextGen version will drop ktor and directly use Netty engine.
-ktor-network = { group = "io.ktor", name = "ktor-network", version.ref = "ktor" }
-ktor-server-netty = { group = "io.ktor", name = "ktor-server-netty-jvm", version.ref = "ktor" }
 
 netty-codec-http = { group = "io.netty", name = "netty-codec-http", version.ref = "netty" }
 netty-codec-socks = { group = "io.netty", name = "netty-codec-socks", version.ref = "netty" }

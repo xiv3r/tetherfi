@@ -31,7 +31,7 @@ import io.netty.util.AttributeKey
 import io.netty.util.NetUtil
 import java.net.InetAddress
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.io.IOException
+import java.io.IOException
 
 internal abstract class ProxyHandler
 internal constructor(

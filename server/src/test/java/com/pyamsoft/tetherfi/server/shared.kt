@@ -23,8 +23,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 
-const val HOSTNAME = "127.0.0.1"
-
 /**
  * This is like runTest, but it does not skip delay() calls.
  *

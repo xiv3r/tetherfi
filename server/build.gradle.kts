@@ -72,9 +72,6 @@ dependencies {
   // Compose runtime for annotations
   implementation(libs.compose.runtime.annotation)
 
-  // TODO(Peter): NextGen version will drop ktor and directly use Netty engine.
-  implementation(libs.ktor.network)
-
   implementation(libs.netty.codec.http)
   implementation(libs.netty.codec.socks)
   implementation(libs.slf4j.nop)
@@ -85,13 +82,11 @@ dependencies {
 
   testImplementation(libs.kotlin.test)
   testImplementation(libs.kotlinx.coroutines.test)
-  testImplementation(libs.ktor.server.netty)
   testImplementation(libs.junit)
 
   androidTestImplementation(libs.androidx.testRunner)
   androidTestImplementation(libs.kotlin.test)
   androidTestImplementation(libs.kotlinx.coroutines.test)
-  androidTestImplementation(libs.ktor.server.netty)
 
   implementation(project(":core"))
 }

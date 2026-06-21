@@ -14,23 +14,27 @@
  * limitations under the License.
  */
 
-package com.pyamsoft.tetherfi.server.proxy.session.tcp.socks.four
+package com.pyamsoft.tetherfi.server.proxy.session
 
 import androidx.annotation.CheckResult
-import com.pyamsoft.pydroid.core.LintIgnoreMagicNumber
-import java.net.Inet4Address
-import java.net.InetAddress
-
-private const val ZERO_BYTE: Byte = 0
+import com.pyamsoft.pydroid.core.cast
+import java.net.InetSocketAddress
+import java.net.SocketAddress
 
 @CheckResult
-internal fun InetAddress.isSOCKS4A(): Boolean {
-  if (this is Inet4Address) {
-    val a = this.address
+private fun SocketAddress.inet(): InetSocketAddress? {
+  return this.cast()
+}
 
-    @LintIgnoreMagicNumber
-    return a[0] == ZERO_BYTE && a[1] == ZERO_BYTE && a[2] == ZERO_BYTE && a[3] != ZERO_BYTE
+val SocketAddress.hostname: String
+   @CheckResult get() {
+    val inet = this.inet()
+    val hostname = inet?.hostname ?: inet?.address?.hostName
+    return hostname.orEmpty()
   }
 
-  return false
-}
+val SocketAddress.address: String
+  @CheckResult get() = this.inet()?.hostString.orEmpty()
+
+val SocketAddress.port: Int
+  @CheckResult get() = this.inet()?.port ?: 0

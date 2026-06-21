@@ -47,26 +47,15 @@ import com.pyamsoft.tetherfi.server.prereq.permission.PermissionGuardImpl
 import com.pyamsoft.tetherfi.server.prereq.vpn.AndroidVpnChecker
 import com.pyamsoft.tetherfi.server.prereq.vpn.VpnChecker
 import com.pyamsoft.tetherfi.server.proxy.AndroidSocketTagger
-import com.pyamsoft.tetherfi.server.proxy.DefaultServerDispatcherFactory
-import com.pyamsoft.tetherfi.server.proxy.ServerDispatcher
 import com.pyamsoft.tetherfi.server.proxy.SharedProxy
 import com.pyamsoft.tetherfi.server.proxy.SocketTagger
 import com.pyamsoft.tetherfi.server.proxy.WifiSharedProxy
 import com.pyamsoft.tetherfi.server.proxy.manager.ProxyManager
 import com.pyamsoft.tetherfi.server.proxy.manager.factory.DefaultProxyManagerFactory
-import com.pyamsoft.tetherfi.server.proxy.session.ProxySession
-import com.pyamsoft.tetherfi.server.proxy.session.tcp.TcpProxyData
-import com.pyamsoft.tetherfi.server.proxy.session.tcp.http.HttpProxySession
-import com.pyamsoft.tetherfi.server.proxy.session.tcp.http.RequestParser
-import com.pyamsoft.tetherfi.server.proxy.session.tcp.http.UrlRequestParser
-import com.pyamsoft.tetherfi.server.proxy.session.tcp.http.urlfixer.PSNUrlFixer
-import com.pyamsoft.tetherfi.server.proxy.session.tcp.http.urlfixer.UrlFixer
-import com.pyamsoft.tetherfi.server.proxy.session.tcp.socks.SOCKSProxySession
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.multibindings.IntoSet
-import javax.inject.Named
 import javax.inject.Singleton
 
 @Module
@@ -75,8 +64,6 @@ abstract class ServerAppModule {
   @Binds
   @CheckResult
   internal abstract fun bindSocketTagger(impl: AndroidSocketTagger): SocketTagger
-
-  @Binds @CheckResult internal abstract fun bindRequestParser(impl: UrlRequestParser): RequestParser
 
   @Binds
   @CheckResult
@@ -133,13 +120,6 @@ abstract class ServerAppModule {
   @CheckResult
   internal abstract fun bindBlockedClientTracker(impl: ClientManagerImpl): BlockedClientTracker
 
-  // URL fixers
-  @Binds
-  @IntoSet
-  @CheckResult
-  @ServerInternalApi
-  internal abstract fun bindPSNUrlFixer(impl: PSNUrlFixer): UrlFixer
-
   // Proxy
   @Binds @CheckResult internal abstract fun bindProxy(impl: WifiSharedProxy): SharedProxy
 
@@ -152,26 +132,9 @@ abstract class ServerAppModule {
   @Binds
   @CheckResult
   @ServerInternalApi
-  internal abstract fun bindServerDispatcherFactory(
-      impl: DefaultServerDispatcherFactory
-  ): ServerDispatcher.Factory
-
-  @Binds
-  @CheckResult
-  @ServerInternalApi
   internal abstract fun bindProxyManagerFactory(
       impl: DefaultProxyManagerFactory
   ): ProxyManager.Factory
-
-  @Binds
-  @CheckResult
-  @Named("http")
-  internal abstract fun bindHttpProxySession(impl: HttpProxySession): ProxySession<TcpProxyData>
-
-  @Binds
-  @CheckResult
-  @Named("socks")
-  internal abstract fun bindSocksProxySession(impl: SOCKSProxySession): ProxySession<TcpProxyData>
 
   // Lockers
   @Binds

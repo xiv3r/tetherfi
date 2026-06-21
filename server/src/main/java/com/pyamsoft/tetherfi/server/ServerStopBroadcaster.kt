@@ -42,6 +42,7 @@ internal constructor(
     proxy.set(RunningStatus.Stopping)
     wifiDirect.set(RunningStatus.Stopping)
 
+    // TODO(Peter): No longer used?
     Timber.d { "Broadcast stop-request" }
     stopRequestBroadcaster.emit(ServerStopRequestEvent)
   }

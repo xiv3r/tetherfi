@@ -18,8 +18,8 @@ package com.pyamsoft.tetherfi.server.network
 
 import android.net.Network
 import androidx.annotation.CheckResult
-import io.ktor.network.sockets.Socket
 import java.net.DatagramSocket
+import java.net.Socket
 
 fun interface SocketBinder {
 

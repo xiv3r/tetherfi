@@ -133,18 +133,6 @@ class TFApp : Application() {
           "Kotlin Symbol Processing API",
       )
 
-      OssLibraries.add(
-          "Ktor",
-          "https://github.com/ktorio/ktor",
-          "Framework for quickly creating connected applications in Kotlin with minimal effort",
-      )
-
-      OssLibraries.add(
-          "Ktor (pyamsoft fork)",
-          "https://github.com/pyamsoft/ktor",
-          "A fork of Ktor that adds support for Socket customization (used for the 'Preferred Network' feature)",
-      )
-
       @LintIgnoreMaxLineLength
       OssLibraries.add(
           "AndroidX Activity Compose",

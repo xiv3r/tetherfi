@@ -19,9 +19,9 @@ package com.pyamsoft.tetherfi.server.netty.handler
 import androidx.annotation.CheckResult
 import com.pyamsoft.tetherfi.server.netty.TestSetup
 import com.pyamsoft.tetherfi.server.netty.withLogging
+import com.pyamsoft.tetherfi.server.proxy.session.address
 import com.pyamsoft.tetherfi.server.proxy.session.netty.handler.socks.Socks4ProxyHandler
 import com.pyamsoft.tetherfi.server.runBlockingWithDelays
-import io.ktor.util.network.address
 import io.netty.channel.Channel
 import io.netty.channel.ChannelInboundHandler
 import io.netty.handler.codec.socksx.v4.DefaultSocks4CommandRequest
