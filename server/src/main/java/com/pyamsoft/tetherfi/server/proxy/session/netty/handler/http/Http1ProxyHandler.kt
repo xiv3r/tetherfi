@@ -419,11 +419,18 @@ private constructor(
     // Strip hop-by-hop headers before forwarding
     val headers = msg.headers()
 
+    // Websocket upgrades need Connection/Upgrade to reach the upstream server intact
+    val isWebSocketUpgrade =
+        headers.get(HttpHeaderNames.UPGRADE)?.equals("websocket", ignoreCase = true) == true
+
     @Suppress("DEPRECATION") headers.remove(HttpHeaderNames.KEEP_ALIVE)
-    headers.remove(HttpHeaderNames.CONNECTION)
+
+    if (!isWebSocketUpgrade) {
+      headers.remove(HttpHeaderNames.CONNECTION)
+      headers.remove(HttpHeaderNames.UPGRADE)
+    }
 
     headers.remove(HttpHeaderNames.TRANSFER_ENCODING)
-    headers.remove(HttpHeaderNames.UPGRADE)
     headers.remove(HttpHeaderNames.TE)
     headers.remove(HttpHeaderNames.TRAILER)
 
